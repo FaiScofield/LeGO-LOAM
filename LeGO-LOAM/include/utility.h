@@ -50,13 +50,41 @@ using namespace std;
 
 typedef pcl::PointXYZI  PointType;
 
+/*
+ * Horizon_SCAN = 360 / horitontal_resolution. For velodyne, horitontal_resolution = 0.2.
+ * GroundScanInd means roughly how many scans represent ground from the bottom.
+ *
+ * For 64ES3:
+ * Angular Resolution (Vertical): 0.4°
+ * Angular Resolution (Horizontal/Azimuth(yaw)): 0.0864° – 0.3456°
+ *  RPM   RPS(Hz)   Total Laser Points   Points Per Laser       Angular
+ *                  per Revolution       per Revolution     Resolution(degrees)
+ * 0300     05          266,627             4167                0.0864
+ * 0600     10          133,333             2083                0.1728
+ * 0900     15          88,889              1389                0.2592
+ * 1200     20          66,657              1042                0.3456
+ *
+ * Vertical Field of View(VFOV) 26.8 degrees(+2° to 24.8°):
+ *    +2.00 to - 8.33 @ 1/3 degree spacing for 32 lasers
+ *    -8.83 to -24.33 @ 1/2 degree spacing for 32 lasers
+ *
+ */
+ 
 // VLP-16
-extern const int N_SCAN = 16;
-extern const int Horizon_SCAN = 1800;
-extern const float ang_res_x = 0.2;
-extern const float ang_res_y = 2.0;
+// extern const int N_SCAN = 16;
+//extern const int Horizon_SCAN = 1800;
+//extern const float ang_res_x = 0.2;
+//extern const float ang_res_y = 2.0;
+//extern const float ang_bottom = 15.0+0.1;
+//extern const int groundScanInd = 7;
+
+// 64ES3
+extern const int N_SCAN = 64;
+extern const int Horizon_SCAN = 2083;
+extern const float ang_res_x = 0.1728;
+extern const float ang_res_y = 26.8/float(N_SCAN-1);
 extern const float ang_bottom = 15.0+0.1;
-extern const int groundScanInd = 7;
+extern const int groundScanInd = 15;
 
 // Ouster OS1-64
 // extern const int N_SCAN = 64;
@@ -65,6 +93,7 @@ extern const int groundScanInd = 7;
 // extern const float ang_res_y = 33.2/float(N_SCAN-1);
 // extern const float ang_bottom = 16.6+0.1;
 // extern const int groundScanInd = 15;
+
 
 extern const bool loopClosureEnableFlag = false;
 extern const double mappingProcessInterval = 0.3;
