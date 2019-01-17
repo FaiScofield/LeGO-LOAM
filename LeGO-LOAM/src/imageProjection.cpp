@@ -187,6 +187,8 @@ public:
         for (size_t i = 0; i < cloudSize; ++i) {
             thisPoint.x = laserCloudIn->points[i].x;
             thisPoint.y = laserCloudIn->points[i].y;
+//            thisPoint.x = laserCloudIn->points[i].y;
+//            thisPoint.y = -laserCloudIn->points[i].x;
             thisPoint.z = laserCloudIn->points[i].z;
 
             verticalAngle = atan2(thisPoint.z, sqrt(thisPoint.x * thisPoint.x + thisPoint.y * thisPoint.y)) * 180 / M_PI; // 与水平面夹角
@@ -204,7 +206,7 @@ public:
             else
              //   columnIdn = 1350 - int(horizonAngle / ang_res_x);   // 顺时针的-90度处1800
                 columnIdn = int(Horizon_SCAN/4*3) - int(horizonAngle / ang_res_x);
-            
+
             columnIdn = -round((horizonAngle - 90.0)/ang_res_x) + Horizon_SCAN/2;
             if (columnIdn >= Horizon_SCAN)
                 columnIdn -= Horizon_SCAN;

@@ -31,18 +31,18 @@ catkin_package(
 )
 
 include_directories(
-	include
-	${catkin_INCLUDE_DIRS}
-	${PCL_INCLUDE_DIRS}
-	${OpenCV_INCLUDE_DIRS}
-	${GTSAM_INCLUDE_DIR}
+    include
+    ${catkin_INCLUDE_DIRS}
+    ${PCL_INCLUDE_DIRS}
+    ${OpenCV_INCLUDE_DIRS}
+    ${GTSAM_INCLUDE_DIR}
 )
 
 link_directories(
-	include
-	${OpenCV_LIBRARY_DIRS}
-	${PCL_LIBRARY_DIRS}
-	${GTSAM_LIBRARY_DIRS}
+    include
+    ${OpenCV_LIBRARY_DIRS}
+    ${PCL_LIBRARY_DIRS}
+    ${GTSAM_LIBRARY_DIRS}
 )
 
 add_executable(imageProjection src/imageProjection.cpp)
@@ -58,3 +58,6 @@ target_link_libraries(mapOptmization ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Open
 
 add_executable(transformFusion src/transformFusion.cpp)
 target_link_libraries(transformFusion ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
+add_executable(saveTrajectory src/saveTrajectory.cpp)
+target_link_libraries(saveTrajectory ${catkin_LIBRARIES})

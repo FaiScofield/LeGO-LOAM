@@ -25,7 +25,7 @@
 
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
- 
+
 #include <vector>
 #include <cmath>
 #include <algorithm>
@@ -69,7 +69,7 @@ typedef pcl::PointXYZI  PointType;
  *    -8.83 to -24.33 @ 1/2 degree spacing for 32 lasers
  *
  */
- 
+
 // VLP-16
 // extern const int N_SCAN = 16;
 //extern const int Horizon_SCAN = 1800;
@@ -126,16 +126,16 @@ extern const float historyKeyframeSearchRadius = 5.0;
 extern const int   historyKeyframeSearchNum = 25;
 extern const float historyKeyframeFitnessScore = 0.3;
 
-extern const float globalMapVisualizationSearchRadius = 500.0;
+extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
 
 
-struct smoothness_t{ 
+struct smoothness_t{
     float value;
     size_t ind;
 };
 
-struct by_value{ 
-    bool operator()(smoothness_t const &left, smoothness_t const &right) { 
+struct by_value{
+    bool operator()(smoothness_t const &left, smoothness_t const &right) {
         return left.value < right.value;
     }
 };

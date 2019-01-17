@@ -19,6 +19,9 @@
     <node pkg="lego_loam" type="mapOptmization"     name="mapOptmization"     output="screen"/>
     <node pkg="lego_loam" type="transformFusion"    name="transformFusion"    output="screen"/>
 
+    <node pkg="lego_loam" type="saveTrajectory"    name="saveTrajectory"    output="screen">
+        <param name="trajectory_file" type="string" value="/home/vance/dataset/fzu/results/trajectory.txt"/>
+    </node>
     <node pkg="tf" type="static_transform_publisher" name="velodyne_to_camera" args="0 0 0 -1.570795 -1.570795 0        /camera /velodyne   10" />
 
 </launch>
