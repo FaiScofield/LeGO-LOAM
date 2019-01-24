@@ -5,6 +5,7 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Map Cloud1/Autocompute Value Bounds1
+        - /TF1/Frames1
       Splitter Ratio: 0.5555559992790222
     Tree Height: 490
   - Class: rviz/Selection
@@ -112,7 +113,7 @@ Visualization Manager:
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 53.11000061035156
+      Max Intensity: 54.08599853515625
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: Map Cloud
@@ -293,6 +294,37 @@ Visualization Manager:
       Topic: /integrated_to_init
       Unreliable: false
       Value: false
+    - Class: rviz/TF
+      Enabled: true
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        aft_mapped:
+          Value: false
+        camera:
+          Value: false
+        camera_init:
+          Value: false
+        laser_odom:
+          Value: false
+        velodyne:
+          Value: true
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: true
+      Show Axes: true
+      Show Names: true
+      Tree:
+        camera_init:
+          aft_mapped:
+            {}
+          camera:
+            velodyne:
+              {}
+          laser_odom:
+            {}
+      Update Interval: 0
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 0; 0; 0
@@ -308,25 +340,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 49.064903259277344
+      Distance: 274.3643493652344
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 8.729049682617188
-        Y: -2.963442802429199
-        Z: -1.1880905628204346
+        X: -12.830162048339844
+        Y: -11.826143264770508
+        Z: -25.836971282958984
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: -0.16520310938358307
+      Pitch: -0.26020288467407227
       Target Frame: base_link
       Value: Orbit (rviz)
-      Yaw: 1.6454311609268188
+      Yaw: 1.675431251525879
     Saved: ~
 Window Geometry:
   Displays:

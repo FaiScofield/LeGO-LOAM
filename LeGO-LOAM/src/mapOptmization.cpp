@@ -731,16 +731,16 @@ public:
         mtx.unlock();
 
         for (int i = 0; i < pointSearchIndGlobalMap.size(); ++i)
-          globalMapKeyPoses->points.push_back(cloudKeyPoses3D->points[pointSearchIndGlobalMap[i]]);
+            globalMapKeyPoses->points.push_back(cloudKeyPoses3D->points[pointSearchIndGlobalMap[i]]);
 
         downSizeFilterGlobalMapKeyPoses.setInputCloud(globalMapKeyPoses);
         downSizeFilterGlobalMapKeyPoses.filter(*globalMapKeyPosesDS);
 
         for (int i = 0; i < globalMapKeyPosesDS->points.size(); ++i) {
-      int thisKeyInd = (int)globalMapKeyPosesDS->points[i].intensity;
-      *globalMapKeyFrames += *transformPointCloud(cornerCloudKeyFrames[thisKeyInd],   &cloudKeyPoses6D->points[thisKeyInd]);
-      *globalMapKeyFrames += *transformPointCloud(surfCloudKeyFrames[thisKeyInd],    &cloudKeyPoses6D->points[thisKeyInd]);
-      *globalMapKeyFrames += *transformPointCloud(outlierCloudKeyFrames[thisKeyInd], &cloudKeyPoses6D->points[thisKeyInd]);
+            int thisKeyInd = (int)globalMapKeyPosesDS->points[i].intensity;
+            *globalMapKeyFrames += *transformPointCloud(cornerCloudKeyFrames[thisKeyInd],  &cloudKeyPoses6D->points[thisKeyInd]);
+            *globalMapKeyFrames += *transformPointCloud(surfCloudKeyFrames[thisKeyInd],    &cloudKeyPoses6D->points[thisKeyInd]);
+            *globalMapKeyFrames += *transformPointCloud(outlierCloudKeyFrames[thisKeyInd], &cloudKeyPoses6D->points[thisKeyInd]);
         }
 
         downSizeFilterGlobalMapKeyFrames.setInputCloud(globalMapKeyFrames);
@@ -907,7 +907,7 @@ public:
         if (cloudKeyPoses3D->points.empty() == true)
             return;
 
-    if (loopClosureEnableFlag == true) {
+        if (loopClosureEnableFlag == true) {
             if (recentCornerCloudKeyFrames.size() < surroundingKeyframeSearchNum) {
                 recentCornerCloudKeyFrames. clear();
                 recentSurfCloudKeyFrames.   clear();
@@ -923,7 +923,7 @@ public:
                     if (recentCornerCloudKeyFrames.size() >= surroundingKeyframeSearchNum)
                         break;
                 }
-            }else{
+            } else {
                 if (latestFrameID != cloudKeyPoses3D->points.size() - 1) {
 
                     recentCornerCloudKeyFrames. pop_front();
@@ -943,16 +943,16 @@ public:
                 *laserCloudSurfFromMap   += *recentSurfCloudKeyFrames[i];
                 *laserCloudSurfFromMap   += *recentOutlierCloudKeyFrames[i];
             }
-    }else{
+        } else {
             surroundingKeyPoses->clear();
             surroundingKeyPosesDS->clear();
 
-      kdtreeSurroundingKeyPoses->setInputCloud(cloudKeyPoses3D);
-      kdtreeSurroundingKeyPoses->radiusSearch(currentRobotPosPoint, (double)surroundingKeyframeSearchRadius, pointSearchInd, pointSearchSqDis, 0);
-      for (int i = 0; i < pointSearchInd.size(); ++i)
-                surroundingKeyPoses->points.push_back(cloudKeyPoses3D->points[pointSearchInd[i]]);
-      downSizeFilterSurroundingKeyPoses.setInputCloud(surroundingKeyPoses);
-      downSizeFilterSurroundingKeyPoses.filter(*surroundingKeyPosesDS);
+            kdtreeSurroundingKeyPoses->setInputCloud(cloudKeyPoses3D);
+            kdtreeSurroundingKeyPoses->radiusSearch(currentRobotPosPoint, (double)surroundingKeyframeSearchRadius, pointSearchInd, pointSearchSqDis, 0);
+            for (int i = 0; i < pointSearchInd.size(); ++i)
+                    surroundingKeyPoses->points.push_back(cloudKeyPoses3D->points[pointSearchInd[i]]);
+            downSizeFilterSurroundingKeyPoses.setInputCloud(surroundingKeyPoses);
+            downSizeFilterSurroundingKeyPoses.filter(*surroundingKeyPosesDS);
 
             int numSurroundingPosesDS = surroundingKeyPosesDS->points.size();
             for (int i = 0; i < surroundingExistingKeyPosesID.size(); ++i) {
@@ -998,7 +998,7 @@ public:
                 *laserCloudSurfFromMap   += *surroundingSurfCloudKeyFrames[i];
                 *laserCloudSurfFromMap   += *surroundingOutlierCloudKeyFrames[i];
             }
-    }
+        }
 
         downSizeFilterCorner.setInputCloud(laserCloudCornerFromMap);
         downSizeFilterCorner.filter(*laserCloudCornerFromMapDS);
@@ -1333,7 +1333,7 @@ public:
         isam->update();
 
         gtSAMgraph.resize(0);
-    initialEstimate.clear();
+        initialEstimate.clear();
 
         PointType thisPose3D;
         PointTypePose thisPose6D;
