@@ -64,7 +64,7 @@ typedef pcl::PointXYZI  PointType;
  * 0900     15          88,889              1389                0.2592
  * 1200     20          66,657              1042                0.3456
  *
- * Vertical Field of View(VFOV) 26.8 degrees(+2° to 24.8°):
+ * Vertical Field of View(VFOV) 26.8 degrees(+2° to -24.8°):
  *    +2.00 to - 8.33 @ 1/3 degree spacing for 32 lasers
  *    -8.83 to -24.33 @ 1/2 degree spacing for 32 lasers
  *
@@ -83,8 +83,8 @@ extern const int N_SCAN = 64;
 extern const int Horizon_SCAN = 2083;
 extern const float ang_res_x = 0.1728;
 extern const float ang_res_y = 26.8/float(N_SCAN-1);
-extern const float ang_bottom = 15.0+0.1;
-extern const int groundScanInd = 15;
+extern const float ang_bottom = 24.8;   // 15.1
+extern const int groundScanInd = 20;
 
 // Ouster OS1-64
 // extern const int N_SCAN = 64;

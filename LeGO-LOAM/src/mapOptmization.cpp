@@ -650,7 +650,7 @@ public:
         newLaserOdometry = true;
     }
 
-    // 接收IMU信息，只使用了翻滚角和俯仰角
+    // 接收IMU信息，只使用了翻滚角roll和俯仰角pitch
     void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn) {
         double roll, pitch, yaw;
         tf::Quaternion orientation;
@@ -909,8 +909,8 @@ public:
 
         if (loopClosureEnableFlag == true) {
             if (recentCornerCloudKeyFrames.size() < surroundingKeyframeSearchNum) {
-                recentCornerCloudKeyFrames. clear();
-                recentSurfCloudKeyFrames.   clear();
+                recentCornerCloudKeyFrames.clear();
+                recentSurfCloudKeyFrames.clear();
                 recentOutlierCloudKeyFrames.clear();
                 int numPoses = cloudKeyPoses3D->points.size();
                 for (int i = numPoses-1; i >= 0; --i) {

@@ -728,7 +728,7 @@ public:
         surfPointsFlat->clear();
         surfPointsLessFlat->clear();
 
-        // 将每条线上的点分入相应的类别：边沿点和平面点
+        // 将每条线上的点分入相应的类别：边缘点和平面点
         for (int i = 0; i < N_SCAN; i++) {
             surfPointsLessFlatScan->clear();
 
@@ -1071,7 +1071,7 @@ public:
       return degrees * M_PI / 180.0;
     }
 
-    // 寻找对应的尖锐点
+    // 寻找对应的边缘点
     void findCorrespondingCornerFeatures(int iterCount) {
         // Levenberg-Marquardt算法(L-M method)，非线性最小二乘算法，最优化算法的一种. 最多迭代25次
         int cornerPointsSharpNum = cornerPointsSharp->points.size();
@@ -1218,7 +1218,7 @@ public:
         for (int i = 0; i < surfPointsFlatNum; i++) {
             TransformToStart(&surfPointsFlat->points[i], &pointSel);
 
-            if (iterCount % 5 == 0) {
+            if (iterCount % 5 == 0) { // 每迭代5次重新查找一次匹配点
                 // kd-tree最近点查找，在经过体素栅格滤波之后的平面点中查找，一般平面点太多，滤波后最近点查找数据量小
                 kdtreeSurfLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);
                 int closestPointInd = -1, minPointInd2 = -1, minPointInd3 = -1;
@@ -1339,6 +1339,7 @@ public:
         }
     }
 
+    // 从平面对应点计算相对位资变换，
     bool calculateTransformationSurf(int iterCount) {
         int pointSelNum = laserCloudOri->points.size();
 
@@ -1432,7 +1433,9 @@ public:
             matX = matP * matX2;
         }
 
-        // 累加每次迭代的旋转平移量?
+        // 累加每次迭代的旋转平移量
+        // 这里的变换看似是Rx，Rz, ty,实际上在畸变矫正环节已经把点云的坐标系改成相机坐标系模式了
+        // 所以实际上这里是利用平面特征点计算R_y(pitch), R_x(roll)和t_z
         transformCur[0] += matX.at<float>(0, 0);
         transformCur[2] += matX.at<float>(1, 0);
         transformCur[4] += matX.at<float>(2, 0);
@@ -1456,6 +1459,7 @@ public:
         return true;
     }
 
+    // 从边缘对应点计算相对位资变换
     bool calculateTransformationCorner(int iterCount) {
         int pointSelNum = laserCloudOri->points.size();
 
@@ -1535,6 +1539,9 @@ public:
             matX = matP * matX2;
         }
 
+        // 累加每次迭代的旋转平移量
+        // 这里的变换看似是Ry，tx, tz,实际上在畸变矫正环节已经把点云的坐标系改成相机坐标系模式了
+        // 所以实际上这里是利用边缘特征点计算R_z(yaw), t_y和t_x
         transformCur[1] += matX.at<float>(0, 0);
         transformCur[3] += matX.at<float>(1, 0);
         transformCur[5] += matX.at<float>(2, 0);
@@ -1759,7 +1766,7 @@ public:
 
     // 计算位姿变换
     void updateTransformation() {
-        // 尖锐点数量小于10，或平面点数量小于100则跳过
+        // 边缘点数量小于10，或平面点数量小于100则跳过
         if (laserCloudCornerLastNum < 10 || laserCloudSurfLastNum < 100)
             return;
 
@@ -1790,7 +1797,7 @@ public:
         }
     }
 
-    // 对两种位姿做积分
+    // 对两种位姿做积分,求累计变换（全局位姿）
     void integrateTransformation() {
         float rx, ry, rz, tx, ty, tz;
         // 求相对于原点的旋转量,垂直方向上1.05倍修正?
@@ -1827,10 +1834,10 @@ public:
 
     // 发布帧间匹配算出的位姿变换
     void publishOdometry() {
-        // 欧拉角转换成四元数
+        // 欧拉角转换成四元数，这里把Roll，Pitch，Yaw顺序调回来了
         geometry_msgs::Quaternion geoQuat = tf::createQuaternionMsgFromRollPitchYaw(transformSum[2], -transformSum[0], -transformSum[1]);
 
-        // publish四元数和平移量
+        // publish四元数和平移量，又以相机坐标系表示
         laserOdometry.header.stamp = cloudHeader.stamp;
         laserOdometry.pose.pose.orientation.x = -geoQuat.y;
         laserOdometry.pose.pose.orientation.y = -geoQuat.z;

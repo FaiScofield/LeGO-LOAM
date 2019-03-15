@@ -177,7 +177,7 @@ public:
         segMsg.orientationDiff = segMsg.endOrientation - segMsg.startOrientation;
     }
 
-    // 将点云按照线数和分辨率投影到一个64*1800的平面上
+    // 将点云按照线数和分辨率投影到一个64*1800(2083)的平面上
     void projectPointCloud() {
         float verticalAngle, horizonAngle, range;
         size_t rowIdn, columnIdn, index, cloudSize;
@@ -222,7 +222,7 @@ public:
             index = columnIdn  + rowIdn * Horizon_SCAN;             // 像素标号
 
             fullCloud->points[index] = thisPoint;
-            fullInfoCloud->points[index].intensity = range;         // 点的距离存在intensity里
+            fullInfoCloud->points[index].intensity = range;         // 点的距离存在fullInfoCloud的intensity里
         }
     }
 
@@ -231,6 +231,7 @@ public:
         size_t lowerInd, upperInd;
         float diffX, diffY, diffZ, angle;
 
+        // 同一列不同行的点之间的垂直夹角小于10°即定为平面点。
         for (size_t j = 0; j < Horizon_SCAN; ++j) {
             for (size_t i = 0; i < groundScanInd; ++i) {
                 lowerInd = j + ( i )*Horizon_SCAN;
@@ -368,7 +369,7 @@ public:
                 else
                     alpha = segmentAlphaY;
 
-                angle = atan2(d2*sin(alpha), (d1 -d2*cos(alpha)));
+                angle = atan2(d2*sin(alpha), (d1 - d2*cos(alpha)));
 
                 if (angle > segmentTheta) {
                     queueIndX[queueEndInd] = thisIndX;
