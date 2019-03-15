@@ -27,7 +27,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include "utility.h"
+#include <opencv2/highgui/highgui.hpp>
 
+int frameCount = 0;
+double tatalRunTime = 0.0;
 
 class ImageProjection{
 private:
@@ -74,6 +77,8 @@ private:
 
     uint16_t *queueIndX;    // 索引队列
     uint16_t *queueIndY;
+
+    ofstream fileOperator;
 
 public:
     ImageProjection() : nh("~") {
@@ -154,12 +159,62 @@ public:
         pcl::fromROSMsg(*laserCloudMsg, *laserCloudIn);
     }
 
+    void outputRunTime(double dt) {
+        tatalRunTime += dt;
+        ROS_INFO("Frame %d time cost: %f, Averange time cost: %f", frameCount, dt, tatalRunTime/(double)frameCount);
+    }
+
+    void saveImagePointcloud() {
+        // save image
+        cv::Mat rangeMatDisplay = cv::Mat(N_SCAN, Horizon_SCAN, CV_8UC1, cv::Scalar::all(0));;
+        for (int i = 0; i < N_SCAN; ++i) {
+            for (int j = 0; j < Horizon_SCAN; ++j) {
+                double p = rangeMat.at<double>(i,j);
+                if (p < 0.5 ) p = 0.0;
+                else if (p > 150.0) p = 255.0;
+                else p *= 255.0 / 150.0;
+                rangeMatDisplay.at<uchar>(i,j) = static_cast<uchar>(p);
+            }
+        }
+        cv::imwrite("/home/vance/test_frame_100_image.jpg", rangeMatDisplay);
+        ROS_INFO("write image successed.");
+
+        // save pointcloud
+        fullCloud->width = 1;
+        fullCloud->height = fullCloud->points.size();
+        groundCloud->width = 1;
+        groundCloud->height = groundCloud->points.size();
+        segmentedCloud->width = 1;
+        segmentedCloud->height = segmentedCloud->points.size();
+        outlierCloud->width = 1;
+        outlierCloud->height = outlierCloud->points.size();
+        segmentedCloudPure->width = 1;
+        segmentedCloudPure->height = segmentedCloudPure->points.size();
+        pcl::io::savePCDFile("/home/vance/test_frame_100_full_cloud.pcd", *fullCloud);
+        pcl::io::savePCDFile("/home/vance/test_frame_100_ground_cloud.pcd", *groundCloud);
+        pcl::io::savePCDFile("/home/vance/test_frame_100_segmented_cloud.pcd", *segmentedCloud);
+        pcl::io::savePCDFile("/home/vance/test_frame_100_outlier_cloud.pcd", *outlierCloud);
+        pcl::io::savePCDFile("/home/vance/test_frame_100_segmentedCloudPure.pcd", *segmentedCloudPure);
+    }
+
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg) {
+        frameCount++;
+        auto t1 = std::chrono::steady_clock::now();
+
         copyPointCloud(laserCloudMsg);
         findStartEndAngle();
         projectPointCloud();
         groundRemoval();
         cloudSegmentation();
+
+        auto t2 = std::chrono::steady_clock::now();
+        double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+        if (saveDataForDebug) {
+            outputRunTime(dt);
+            if (frameCount == 50)
+                saveImagePointcloud();
+        }
+
         publishCloud();
         resetParameters();
     }
@@ -263,7 +318,7 @@ public:
                 }
             }
         }
-        if (pubGroundCloud.getNumSubscribers() != 0) {
+        if (pubGroundCloud.getNumSubscribers() != 0 || saveDataForDebug) {
             for (size_t i = 0; i <= groundScanInd; ++i) {
                 for (size_t j = 0; j < Horizon_SCAN; ++j) {
                     if (groundMat.at<int8_t>(i,j) == 1)
@@ -309,7 +364,7 @@ public:
             segMsg.endRingIndex[i] = sizeOfSegCloud - 1 - 5;
         }
 
-        if (pubSegmentedCloudPure.getNumSubscribers() != 0) {
+        if (pubSegmentedCloudPure.getNumSubscribers() != 0 || saveDataForDebug) {
             for (size_t i = 0; i < N_SCAN; ++i) {
                 for (size_t j = 0; j < Horizon_SCAN; ++j) {
                     if (labelMat.at<int>(i,j) > 0 && labelMat.at<int>(i,j) != 999999) {

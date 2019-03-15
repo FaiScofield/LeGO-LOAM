@@ -44,6 +44,10 @@
 #include <thread>
 #include <mutex>
 
+// for debug
+#include <chrono>
+#include <pcl/io/io.h>
+
 #define PI 3.14159265
 
 using namespace std;
@@ -84,7 +88,7 @@ extern const int Horizon_SCAN = 2083;
 extern const float ang_res_x = 0.1728;
 extern const float ang_res_y = 26.8/float(N_SCAN-1);
 extern const float ang_bottom = 24.8;   // 15.1
-extern const int groundScanInd = 20;
+extern const int groundScanInd = 25;
 
 // Ouster OS1-64
 // extern const int N_SCAN = 64;
@@ -128,6 +132,7 @@ extern const float historyKeyframeFitnessScore = 0.3;
 
 extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
 
+extern const bool saveDataForDebug = true;  // for debug
 
 struct smoothness_t{
     float value;
