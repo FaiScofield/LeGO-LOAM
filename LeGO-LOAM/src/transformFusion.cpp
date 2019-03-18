@@ -87,21 +87,21 @@ public:
         }
     }
 
-    // odometry的运动估计和mapping矫正量融合之后得到的最终的位姿transformMapped
+    //odometry的运动估计和mapping矫正量融合之后得到的最终的位姿transformMapped
     void transformAssociateToMap() {
-        // 平移后绕y轴旋转（-transformSum[1]）
+        //平移后绕y轴旋转（-transformSum[1]）
         float x1 = cos(transformSum[1]) * (transformBefMapped[3] - transformSum[3])
                  - sin(transformSum[1]) * (transformBefMapped[5] - transformSum[5]);
         float y1 = transformBefMapped[4] - transformSum[4];
         float z1 = sin(transformSum[1]) * (transformBefMapped[3] - transformSum[3])
                  + cos(transformSum[1]) * (transformBefMapped[5] - transformSum[5]);
 
-        // 绕x轴旋转（-transformSum[0]）
+        //绕x轴旋转（-transformSum[0]）
         float x2 = x1;
         float y2 = cos(transformSum[0]) * y1 + sin(transformSum[0]) * z1;
         float z2 = -sin(transformSum[0]) * y1 + cos(transformSum[0]) * z1;
 
-        // 绕z轴旋转（-transformSum[2]）
+        //绕z轴旋转（-transformSum[2]）
         transformIncre[3] = cos(transformSum[2]) * x2 + sin(transformSum[2]) * y2;
         transformIncre[4] = -sin(transformSum[2]) * x2 + cos(transformSum[2]) * y2;
         transformIncre[5] = z2;
@@ -177,7 +177,7 @@ public:
                            - (-sin(transformMapped[1]) * x2 + cos(transformMapped[1]) * z2);
     }
 
-    // 接收laserOdometry的信息
+    //接收laserOdometry的信息
     void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr& laserOdometry) {
         currentHeader = laserOdometry->header;
 
@@ -185,7 +185,7 @@ public:
         geometry_msgs::Quaternion geoQuat = laserOdometry->pose.pose.orientation;
         tf::Matrix3x3(tf::Quaternion(geoQuat.z, -geoQuat.x, -geoQuat.y, geoQuat.w)).getRPY(roll, pitch, yaw);
 
-        // 得到旋转平移矩阵
+        //得到旋转平移矩阵
         transformSum[0] = -pitch;
         transformSum[1] = -yaw;
         transformSum[2] = roll;
@@ -209,14 +209,14 @@ public:
         laserOdometry2.pose.pose.position.z = transformMapped[5];
         pubLaserOdometry2.publish(laserOdometry2);
 
-        // 发送旋转平移量
+        //发送旋转平移量
         laserOdometryTrans2.stamp_ = laserOdometry->header.stamp;
         laserOdometryTrans2.setRotation(tf::Quaternion(-geoQuat.y, -geoQuat.z, geoQuat.x, geoQuat.w));
         laserOdometryTrans2.setOrigin(tf::Vector3(transformMapped[3], transformMapped[4], transformMapped[5]));
         tfBroadcaster2.sendTransform(laserOdometryTrans2);
     }
 
-    // 接收laserMapping的转换信息
+    //接收laserMapping的转换信息
     void odomAftMappedHandler(const nav_msgs::Odometry::ConstPtr& odomAftMapped) {
         double roll, pitch, yaw;
         geometry_msgs::Quaternion geoQuat = odomAftMapped->pose.pose.orientation;

@@ -22,7 +22,7 @@ void odomCallback(const nav_msgs::OdometryConstPtr& odom)
     R.getOpenGLSubMatrix(r);
 
     f.open(file_name, std::ios_base::app);
-    f << std::fixed << std::setprecision(6) // 禁用科学计数法
+    f << std::fixed << std::setprecision(6) //禁用科学计数法
       << r[0] << " " << r[1] << " " << r[2]  << " " << -p.x << " "
       << r[4] << " " << r[5] << " " << r[6]  << " " << p.y << " "
       << r[8] << " " << r[9] << " " << r[10] << " " << p.z << std::endl;
@@ -37,7 +37,7 @@ void keyPoseCallback(const sensor_msgs::PointCloud2Ptr& posesCloud)
     pcl::PointXYZI p = poses->points.back();
 
     f.open(file_name, std::ios_base::app);
-//    f << std::fixed << td::setprecision(6);    // 禁用科学计数法
+//    f << std::fixed << td::setprecision(6);    //禁用科学计数法
     f << p.x << " " << p.y << " " << p.z << std::endl;
     f.close();
 }

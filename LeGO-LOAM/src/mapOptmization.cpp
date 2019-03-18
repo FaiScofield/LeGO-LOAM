@@ -6,13 +6,13 @@
 // modification, are permitted provided that the following conditions are met:
 //
 // 1. Redistributions of source code must retain the above copyright notice,
-//    this list of conditions and the following disclaimer.
+//   this list of conditions and the following disclaimer.
 // 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
+//   this list of conditions and the following disclaimer in the documentation
+//   and/or other materials provided with the distribution.
 // 3. Neither the name of the copyright holder nor the names of its
-//    contributors may be used to endorse or promote products derived from this
-//    software without specific prior written permission.
+//   contributors may be used to endorse or promote products derived from this
+//   software without specific prior written permission.
 //
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
@@ -27,10 +27,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 // This is an implementation of the algorithm described in the following paper:
-//   J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time.
-//     Robotics: Science and Systems Conference (RSS). Berkeley, CA, July 2014.
-//   T. Shan and B. Englot. LeGO-LOAM: Lightweight and Ground-Optimized Lidar Odometry and Mapping on Variable Terrain
-//      IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). October 2018.
+//  J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time.
+//    Robotics: Science and Systems Conference (RSS). Berkeley, CA, July 2014.
+//  T. Shan and B. Englot. LeGO-LOAM: Lightweight and Ground-Optimized Lidar Odometry and Mapping on Variable Terrain
+//     IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). October 2018.
 #include "utility.h"
 
 #include <gtsam/geometry/Rot3.h>
@@ -105,8 +105,8 @@ private:
     pcl::PointCloud<PointType>::Ptr surroundingKeyPoses;
     pcl::PointCloud<PointType>::Ptr surroundingKeyPosesDS;
 
-    pcl::PointCloud<PointType>::Ptr laserCloudCornerLast;   // 最新接收到的边沿点
-    pcl::PointCloud<PointType>::Ptr laserCloudSurfLast;     // 最新接收到的平面点
+    pcl::PointCloud<PointType>::Ptr laserCloudCornerLast;   //最新接收到的边沿点
+    pcl::PointCloud<PointType>::Ptr laserCloudSurfLast;     //最新接收到的平面点
     pcl::PointCloud<PointType>::Ptr laserCloudCornerLastDS;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfLastDS;
 
@@ -119,8 +119,8 @@ private:
     pcl::PointCloud<PointType>::Ptr laserCloudOri;
     pcl::PointCloud<PointType>::Ptr coeffSel;
 
-    pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMap;  // map中提取的匹配使用的边沿点
-    pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMap;    // map中提取的匹配使用的平面点
+    pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMap;  //map中提取的匹配使用的边沿点
+    pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMap;    //map中提取的匹配使用的平面点
     pcl::PointCloud<PointType>::Ptr laserCloudCornerFromMapDS;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfFromMapDS;
 
@@ -149,7 +149,7 @@ private:
     std::vector<int> pointSearchInd;
     std::vector<float> pointSearchSqDis;
 
-    // 创建VoxelGrid滤波器（体素栅格滤波器）
+    //创建VoxelGrid滤波器（体素栅格滤波器）
     pcl::VoxelGrid<PointType> downSizeFilterCorner;
     pcl::VoxelGrid<PointType> downSizeFilterSurf;
     pcl::VoxelGrid<PointType> downSizeFilterOutlier;
@@ -173,17 +173,17 @@ private:
     float transformLast[6];
 
     /*************高频转换量**************/
-    float transformSum[6];    // odometry计算得到的到世界坐标系下的转移矩阵
-    float transformIncre[6];  // 转移增量，只使用了后三个平移增量
+    float transformSum[6];    //odometry计算得到的到世界坐标系下的转移矩阵
+    float transformIncre[6];  //转移增量，只使用了后三个平移增量
 
     /*************低频转换量*************/
-    float transformTobeMapped[6]; // 以起始位置为原点的世界坐标系下的转换矩阵（猜测与调整的对象）
-    float transformBefMapped[6];  // 存放mapping之前的Odometry计算的世界坐标系的转换矩阵（注：低频量，不一定与transformSum一样）
-    float transformAftMapped[6];  // 存放mapping之后的经过mapping微调之后的转换矩阵
+    float transformTobeMapped[6]; //以起始位置为原点的世界坐标系下的转换矩阵（猜测与调整的对象）
+    float transformBefMapped[6];  //存放mapping之前的Odometry计算的世界坐标系的转换矩阵（注：低频量，不一定与transformSum一样）
+    float transformAftMapped[6];  //存放mapping之后的经过mapping微调之后的转换矩阵
 
 
-    int imuPointerFront;    // 0
-    int imuPointerLast;     // -1
+    int imuPointerFront;    //0
+    int imuPointerLast;     //-1
 
     double imuTime[imuQueLength];
     float imuRoll[imuQueLength];
@@ -267,7 +267,7 @@ public:
     }
 
     void allocateMemory() {
-        // 指针初始化
+        //指针初始化
         cloudKeyPoses3D.reset(new pcl::PointCloud<PointType>());
         cloudKeyPoses6D.reset(new pcl::PointCloud<PointTypePose>());
 
@@ -373,7 +373,7 @@ public:
         latestFrameID = 0;
     }
 
-    // 基于匀速模型，根据上次微调的结果和odometry这次与上次计算的结果，猜测一个新的世界坐标系的转换矩阵transformTobeMapped
+    //基于匀速模型，根据上次微调的结果和odometry这次与上次计算的结果，猜测一个新的世界坐标系的转换矩阵transformTobeMapped
     void transformAssociateToMap() {
         float x1 = cos(transformSum[1]) * (transformBefMapped[3] - transformSum[3])
                  - sin(transformSum[1]) * (transformBefMapped[5] - transformSum[5]);
@@ -385,7 +385,7 @@ public:
         float y2 = cos(transformSum[0]) * y1 + sin(transformSum[0]) * z1;
         float z2 = -sin(transformSum[0]) * y1 + cos(transformSum[0]) * z1;
 
-        // 平移增量
+        //平移增量
         transformIncre[3] = cos(transformSum[2]) * x2 + sin(transformSum[2]) * y2;
         transformIncre[4] = -sin(transformSum[2]) * x2 + cos(transformSum[2]) * y2;
         transformIncre[5] = z2;
@@ -461,11 +461,11 @@ public:
                                - (-sin(transformTobeMapped[1]) * x2 + cos(transformTobeMapped[1]) * z2);
     }
 
-    // 记录odometry发送的转换矩阵与mapping之后的转换矩阵，下一帧点云会使用(有IMU的话会使用IMU进行补偿)
+    //记录odometry发送的转换矩阵与mapping之后的转换矩阵，下一帧点云会使用(有IMU的话会使用IMU进行补偿)
     void transformUpdate() {
         if (imuPointerLast >= 0) {
             float imuRollLast = 0, imuPitchLast = 0;
-            // 查找点云时间戳小于imu时间戳的imu位置
+            //查找点云时间戳小于imu时间戳的imu位置
             while (imuPointerFront != imuPointerLast) {
                 if (timeLaserOdometry + scanPeriod < imuTime[imuPointerFront]) {
                     break;
@@ -473,7 +473,7 @@ public:
                 imuPointerFront = (imuPointerFront + 1) % imuQueLength;
             }
 
-            // 未找到,此时imuPointerFront==imuPointerLast
+            //未找到,此时imuPointerFront==imuPointerLast
             if (timeLaserOdometry + scanPeriod > imuTime[imuPointerFront]) {
                 imuRollLast = imuRoll[imuPointerFront];
                 imuPitchLast = imuPitch[imuPointerFront];
@@ -484,17 +484,17 @@ public:
                 float ratioBack = (imuTime[imuPointerFront] - timeLaserOdometry - scanPeriod)
                                 / (imuTime[imuPointerFront] - imuTime[imuPointerBack]);
 
-                // 按时间比例求翻滚角和俯仰角
+                //按时间比例求翻滚角和俯仰角
                 imuRollLast = imuRoll[imuPointerFront] * ratioFront + imuRoll[imuPointerBack] * ratioBack;
                 imuPitchLast = imuPitch[imuPointerFront] * ratioFront + imuPitch[imuPointerBack] * ratioBack;
             }
 
-            // imu稍微补偿俯仰角和翻滚角
+            //imu稍微补偿俯仰角和翻滚角
             transformTobeMapped[0] = 0.998 * transformTobeMapped[0] + 0.002 * imuPitchLast;
             transformTobeMapped[2] = 0.998 * transformTobeMapped[2] + 0.002 * imuRollLast;
           }
 
-        // 记录优化之前与之后的转移矩阵
+        //记录优化之前与之后的转移矩阵
         for (int i = 0; i < 6; i++) {
             transformBefMapped[i] = transformSum[i];
             transformAftMapped[i] = transformTobeMapped[i];
@@ -516,19 +516,19 @@ public:
         tZ = transformTobeMapped[5];
     }
 
-    // 根据调整计算后的转移矩阵，将点注册到全局世界坐标系下
+    //根据调整计算后的转移矩阵，将点注册到全局世界坐标系下
     void pointAssociateToMap(PointType const * const pi, PointType * const po) {
-        // 绕z轴旋转（transformTobeMapped[2]）
+        //绕z轴旋转（transformTobeMapped[2]）
         float x1 = cYaw * pi->x - sYaw * pi->y;
         float y1 = sYaw * pi->x + cYaw * pi->y;
         float z1 = pi->z;
 
-        // 绕x轴旋转（transformTobeMapped[0]）
+        //绕x轴旋转（transformTobeMapped[0]）
         float x2 = x1;
         float y2 = cRoll * y1 - sRoll * z1;
         float z2 = sRoll * y1 + cRoll * z1;
 
-        // 绕y轴旋转（transformTobeMapped[1]），再平移
+        //绕y轴旋转（transformTobeMapped[1]），再平移
         po->x = cPitch * x2 + sPitch * z2 + tX;
         po->y = y2 + tY;
         po->z = -sPitch * x2 + cPitch * z2 + tZ;
@@ -619,7 +619,7 @@ public:
         newLaserCloudOutlierLast = true;
     }
 
-    // 接收边沿点
+    //接收边沿点
     void laserCloudCornerLastHandler(const sensor_msgs::PointCloud2ConstPtr& msg) {
         timeLaserCloudCornerLast = msg->header.stamp.toSec();
         laserCloudCornerLast->clear();
@@ -627,7 +627,7 @@ public:
         newLaserCloudCornerLast = true;
     }
 
-    // 接收平面点
+    //接收平面点
     void laserCloudSurfLastHandler(const sensor_msgs::PointCloud2ConstPtr& msg) {
         timeLaserCloudSurfLast = msg->header.stamp.toSec();
         laserCloudSurfLast->clear();
@@ -635,7 +635,7 @@ public:
         newLaserCloudSurfLast = true;
     }
 
-    // 接收旋转平移信息
+    //接收旋转平移信息
     void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr& laserOdometry) {
         timeLaserOdometry = laserOdometry->header.stamp.toSec();
         double roll, pitch, yaw;
@@ -650,7 +650,7 @@ public:
         newLaserOdometry = true;
     }
 
-    // 接收IMU信息，只使用了翻滚角roll和俯仰角pitch
+    //接收IMU信息，只使用了翻滚角roll和俯仰角pitch
     void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn) {
         double roll, pitch, yaw;
         tf::Quaternion orientation;
@@ -1434,7 +1434,7 @@ public:
 
                 timeLastProcessing = timeLaserOdometry;
 
-                // 获取世界坐标系转换矩阵
+                //获取世界坐标系转换矩阵
                 transformAssociateToMap();
 
                 extractSurroundingKeyFrames();
