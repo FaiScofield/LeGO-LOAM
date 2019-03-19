@@ -189,7 +189,6 @@ public:
         transformSum[0] = -pitch;
         transformSum[1] = -yaw;
         transformSum[2] = roll;
-
         transformSum[3] = laserOdometry->pose.pose.position.x;
         transformSum[4] = laserOdometry->pose.pose.position.y;
         transformSum[5] = laserOdometry->pose.pose.position.z;
@@ -225,7 +224,6 @@ public:
         transformAftMapped[0] = -pitch;
         transformAftMapped[1] = -yaw;
         transformAftMapped[2] = roll;
-
         transformAftMapped[3] = odomAftMapped->pose.pose.position.x;
         transformAftMapped[4] = odomAftMapped->pose.pose.position.y;
         transformAftMapped[5] = odomAftMapped->pose.pose.position.z;
@@ -233,7 +231,6 @@ public:
         transformBefMapped[0] = odomAftMapped->twist.twist.angular.x;
         transformBefMapped[1] = odomAftMapped->twist.twist.angular.y;
         transformBefMapped[2] = odomAftMapped->twist.twist.angular.z;
-
         transformBefMapped[3] = odomAftMapped->twist.twist.linear.x;
         transformBefMapped[4] = odomAftMapped->twist.twist.linear.y;
         transformBefMapped[5] = odomAftMapped->twist.twist.linear.z;

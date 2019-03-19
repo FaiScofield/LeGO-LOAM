@@ -54,7 +54,7 @@ private:
 
     pcl::PointCloud<PointType>::Ptr groundCloud;    //代表平面的点云
     pcl::PointCloud<PointType>::Ptr segmentedCloud; //分割出来的点云,包括有效聚类点和部分平面点
-    pcl::PointCloud<PointType>::Ptr segmentedCloudPure; //纯有效聚类点
+    pcl::PointCloud<PointType>::Ptr segmentedCloudPure; //纯有效聚类点,不包含平面点
     pcl::PointCloud<PointType>::Ptr outlierCloud;   //离群点
 
     PointType nanPoint;

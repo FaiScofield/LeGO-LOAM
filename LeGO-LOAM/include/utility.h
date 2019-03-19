@@ -100,7 +100,7 @@ extern const int groundScanInd = 25;
 
 
 extern const bool loopClosureEnableFlag = false;
-extern const double mappingProcessInterval = 0.3;
+extern const double mappingProcessInterval = 0.3;   //建图处理间隔s
 
 extern const float scanPeriod = 0.1;
 extern const int systemDelay = 0;
@@ -123,10 +123,10 @@ extern const float edgeThreshold = 0.1;
 extern const float surfThreshold = 0.1;
 extern const float nearestFeatureSearchSqDist = 25;
 
-extern const float surroundingKeyframeSearchRadius = 50.0;
-extern const int   surroundingKeyframeSearchNum = 50;
+extern const float surroundingKeyframeSearchRadius = 50.0;  //关键帧搜索半径m
+extern const int   surroundingKeyframeSearchNum = 50;       //关键帧搜索数量
 
-extern const float historyKeyframeSearchRadius = 5.0;
+extern const float historyKeyframeSearchRadius = 5.0;       //历史帧搜索半径m
 extern const int   historyKeyframeSearchNum = 25;
 extern const float historyKeyframeFitnessScore = 0.3;
 

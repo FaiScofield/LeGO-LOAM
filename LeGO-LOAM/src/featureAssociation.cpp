@@ -89,14 +89,16 @@ private:
     int imuPointerLast;     //imu最新收到的点在数组中的位置
     int imuPointerLastIteration;
 
-    //一帧中第一个点以及当前点的位移/速度/欧拉角
+    //一帧中第一个/最后一个/当前点的RPY
+//    以及当前点的位移/速度/欧拉角
     float imuRollStart, imuPitchStart, imuYawStart;
-    float cosImuRollStart, cosImuPitchStart, cosImuYawStart, sinImuRollStart, sinImuPitchStart, sinImuYawStart;
+    float imuRollLast, imuPitchLast, imuYawLast;
     float imuRollCur, imuPitchCur, imuYawCur;
+    float cosImuRollStart, cosImuPitchStart, cosImuYawStart, sinImuRollStart, sinImuPitchStart, sinImuYawStart;
 
+    //第一个/当前点的速度和平移量
     float imuVeloXStart, imuVeloYStart, imuVeloZStart;
     float imuShiftXStart, imuShiftYStart, imuShiftZStart;
-
     float imuVeloXCur, imuVeloYCur, imuVeloZCur;
     float imuShiftXCur, imuShiftYCur, imuShiftZCur;
 
@@ -108,7 +110,6 @@ private:
     float imuAngularRotationXLast, imuAngularRotationYLast, imuAngularRotationZLast;
     float imuAngularFromStartX, imuAngularFromStartY, imuAngularFromStartZ;
 
-    float imuRollLast, imuPitchLast, imuYawLast;
     float imuShiftFromStartX, imuShiftFromStartY, imuShiftFromStartZ;
     float imuVeloFromStartX, imuVeloFromStartY, imuVeloFromStartZ;
 
@@ -129,15 +130,14 @@ private:
     float imuShiftX[imuQueLength];
     float imuShiftY[imuQueLength];
     float imuShiftZ[imuQueLength];
-
+    //角速度
     float imuAngularVeloX[imuQueLength];
     float imuAngularVeloY[imuQueLength];
     float imuAngularVeloZ[imuQueLength];
-
+    //角度
     float imuAngularRotationX[imuQueLength];
     float imuAngularRotationY[imuQueLength];
     float imuAngularRotationZ[imuQueLength];
-
 
     ros::Publisher pubLaserCloudCornerLast;
     ros::Publisher pubLaserCloudSurfLast;
@@ -166,8 +166,8 @@ private:
 
     pcl::PointCloud<PointType>::Ptr laserCloudCornerLast;
     pcl::PointCloud<PointType>::Ptr laserCloudSurfLast;
-    pcl::PointCloud<PointType>::Ptr laserCloudOri;
-    pcl::PointCloud<PointType>::Ptr coeffSel;
+    pcl::PointCloud<PointType>::Ptr laserCloudOri;  //存放平面或边缘特征点，每次迭代前会清空
+    pcl::PointCloud<PointType>::Ptr coeffSel;       //存放特征点的权重，每次迭代前会清空
 
     pcl::KdTreeFLANN<PointType>::Ptr kdtreeCornerLast;
     pcl::KdTreeFLANN<PointType>::Ptr kdtreeSurfLast;
@@ -1053,7 +1053,7 @@ public:
         acz = atan2(srzcrx / cos(acx), crzcrx / cos(acx));
     }
 
-    //相对于第一个点云即原点，积累旋转量
+    //相对于第一帧积累旋转量，即相对世界坐标系的累计旋转
     void AccumulateRotation(float cx, float cy, float cz, float lx, float ly, float lz,
                             float &ox, float &oy, float &oz) {
         float srx = cos(lx)*cos(cx)*sin(ly)*sin(cz) - cos(cx)*cos(cz)*sin(lx) - cos(lx)*cos(ly)*sin(cx);
@@ -1082,14 +1082,13 @@ public:
 
     //寻找对应的边缘点
     void findCorrespondingCornerFeatures(int iterCount) {
-        //Levenberg-Marquardt算法(L-M method)，非线性最小二乘算法，最优化算法的一种. 最多迭代25次
-        int cornerPointsSharpNum = cornerPointsSharp->points.size();
+                int cornerPointsSharpNum = cornerPointsSharp->points.size();
 
         //处理当前点云中的曲率最大的特征点,从上个点云中曲率比较大的特征点中找两个最近距离点，一个点使用kd-tree查找，另一个根据找到的点在其相邻线找另外一个最近距离的点
         for (int i = 0; i < cornerPointsSharpNum; i++) {
             TransformToStart(&cornerPointsSharp->points[i], &pointSel);
 
-            //每迭代五次，重新查找最近点
+            //刚开始找一次，之后每迭代五次，重新查找最近点
             if (iterCount % 5 == 0) {
                 //kd-tree查找一个最近距离点，边沿点未经过体素栅格滤波，一般边沿点本来就比较少，不做滤波
                 kdtreeCornerLast->nearestKSearch(pointSel, 1, pointSearchInd, pointSearchSqDis);
@@ -1097,7 +1096,7 @@ public:
 
                 //寻找相邻线距离目标点距离最小的点
                 //再次提醒：velodyne是2度一线，scanID相邻并不代表线号相邻，相邻线度数相差2度，也即线号scanID相差2
-                if (pointSearchSqDis[0] < nearestFeatureSearchSqDist) { //找到的最近点距离的确很近的话 (< 25)
+                if (pointSearchSqDis[0] < nearestFeatureSearchSqDist) { //找到的最近点距离的确很近的话 (<25)
                     closestPointInd = pointSearchInd[0];
                     //提取最近点线号
                     int closestPointScan = int(laserCloudCornerLast->points[closestPointInd].intensity);
@@ -1106,9 +1105,10 @@ public:
                     //寻找距离目标点最近距离的平方和最小的点
                     for (int j = closestPointInd + 1; j < cornerPointsSharpNum; j++) { //向scanID增大的方向查找
                         if (int(laserCloudCornerLast->points[j].intensity) > closestPointScan + 2.5) {  //非相邻线
-                            break;
+                            break;  //找到与最邻近点相距3条线的特征点时跳出
                         }
 
+                        //计算遍历点与最邻近点的距离(平方)
                         pointSqDis = (laserCloudCornerLast->points[j].x - pointSel.x) *
                                      (laserCloudCornerLast->points[j].x - pointSel.x) +
                                      (laserCloudCornerLast->points[j].y - pointSel.y) *
@@ -1127,8 +1127,8 @@ public:
                         }
                     }
 
-                    //同理
-                    for (int j = closestPointInd - 1; j >= 0; j--) { //向scanID减小的方向查找
+                    //同理，向scanID减小的方向查找(三条线)，找次临近点
+                    for (int j = closestPointInd - 1; j >= 0; j--) {
                         if (int(laserCloudCornerLast->points[j].intensity) < closestPointScan - 2.5) {
                             break;
                         }
@@ -1361,6 +1361,7 @@ public:
         cv::Mat matAtB(3, 1, CV_32F, cv::Scalar::all(0));
         cv::Mat matX(3, 1, CV_32F, cv::Scalar::all(0));
 
+        //transformCur还是上一帧的值，这里利用了上一帧的变换做初值
         float srx = sin(transformCur[0]);
         float crx = cos(transformCur[0]);
         float sry = sin(transformCur[1]);
@@ -1406,7 +1407,7 @@ public:
         cv::transpose(matA, matAt);
         matAtA = matAt * matA;
         matAtB = matAt * matB;
-        //求解matAtA * matX = matAtB
+        //求解matAtA * matX = matAtB，最小二乘计算(QR分解法)
         cv::solve(matAtA, matAtB, matX, cv::DECOMP_QR);
 
         if (iterCount == 0) {
@@ -1417,7 +1418,7 @@ public:
             cv::Mat matV2(3, 3, CV_32F, cv::Scalar::all(0));
 
             //求解特征值/特征向量
-            cv::eigen(matAtA, matE, matV);
+            cv::eigen(matAtA, matE, matV);  //计算矩阵的特征向量E及特征向量的反对称阵V
             matV.copyTo(matV2);
 
             isDegenerate = false;
@@ -1573,7 +1574,8 @@ public:
         return true;
     }
 
-    //迭代计算位姿变换
+    //L-M法迭代计算位姿变换，这是之前未解耦的算法
+    //这里用calculateTransformationSurf和calculateTransformationCorner代替
     bool calculateTransformation(int iterCount) {
         int pointSelNum = laserCloudOri->points.size();
 
@@ -1606,7 +1608,6 @@ public:
         float c7 = b2; float c8 = -b1; float c9 = tx*-b2 - ty*-b1;
 
         for (int i = 0; i < pointSelNum; i++) {
-
             pointOri = laserCloudOri->points[i];
             coeff = coeffSel->points[i];
 
@@ -1641,7 +1642,7 @@ public:
         cv::transpose(matA, matAt);
         matAtA = matAt * matA;
         matAtB = matAt * matB;
-        //求解matAtA * matX = matAtB
+        //求解(A^T)A*X=(A^T)B
         cv::solve(matAtA, matAtB, matX, cv::DECOMP_QR);
 
         if (iterCount == 0) {
@@ -1775,7 +1776,8 @@ public:
         }
     }
 
-    //计算位姿变换
+    //计算相对位姿变换入口
+    //Levenberg-Marquardt算法(L-M method)，非线性最小二乘算法，最优化算法的一种.这里最多迭代25次
     void updateTransformation() {
         //边缘点数量小于10，或平面点数量小于100则跳过
         if (laserCloudCornerLastNum < 10 || laserCloudSurfLastNum < 100) {
@@ -1785,8 +1787,8 @@ public:
 
         //由平面点迭代计算位姿变换
         for (int iterCount1 = 0; iterCount1 < 25; iterCount1++) {
-            laserCloudOri->clear();
-            coeffSel->clear();
+            laserCloudOri->clear(); //存放平面特征点，每次迭代前会清空
+            coeffSel->clear();      //存放平面特征点的权重值，每次迭代前会清空
 
             findCorrespondingSurfFeatures(iterCount1);
 
@@ -1798,8 +1800,8 @@ public:
 
         //由边缘点迭代计算位姿变换
         for (int iterCount2 = 0; iterCount2 < 25; iterCount2++) {
-            laserCloudOri->clear();
-            coeffSel->clear();
+            laserCloudOri->clear(); //存放边缘特征点，每次迭代前会清空
+            coeffSel->clear();      //存放边缘特征点的权重值，每次迭代前会清空
 
             findCorrespondingCornerFeatures(iterCount2);
 
@@ -1813,7 +1815,7 @@ public:
     //对两种位姿做积分,求累计变换（全局位姿）
     void integrateTransformation() {
         float rx, ry, rz, tx, ty, tz;
-        //求相对于原点的旋转量,垂直方向上1.05倍修正?
+        //求相对于原点的旋转量
         AccumulateRotation(transformSum[0], transformSum[1], transformSum[2],
                            -transformCur[0], -transformCur[1], -transformCur[2], rx, ry, rz);
 
@@ -1836,7 +1838,7 @@ public:
         PluginIMURotation(rx, ry, rz, imuPitchStart, imuYawStart, imuRollStart,
                           imuPitchLast, imuYawLast, imuRollLast, rx, ry, rz);
 
-        //得到世界坐标系下的转移矩阵
+        //得到世界坐标系下的变换矩阵
         transformSum[0] = rx;
         transformSum[1] = ry;
         transformSum[2] = rz;
@@ -1868,7 +1870,7 @@ public:
         tfBroadcaster.sendTransform(laserOdometryTrans);
     }
 
-    //调整输出点云的坐标系，变回原始的激光坐标系下
+    //调整离群点云的坐标系，变回原始的激光坐标系下
     void adjustOutlierCloud() {
         PointType point;
         int cloudSize = outlierCloud->points.size();
@@ -1896,7 +1898,8 @@ public:
             TransformToEnd(&surfPointsLessFlat->points[i], &surfPointsLessFlat->points[i]);
         }
 
-        //畸变校正之后的点作为last点保存等下个点云进来进行匹配
+        //投影到扫描结束位置的点作为last点保存等下个点云进来进行匹配
+        //这样下一帧的点投影到扫描开始位置，两帧点的坐标系就一致了
         pcl::PointCloud<PointType>::Ptr laserCloudTemp = cornerPointsLessSharp;
         cornerPointsLessSharp = laserCloudCornerLast;
         laserCloudCornerLast = laserCloudTemp;
@@ -1917,6 +1920,7 @@ public:
         frameCount++;
 
         //按照跳帧数publich边沿点，平面点以及全部点给laserMapping(每隔一帧发一次)
+        //每间隔一个点云数据相对点云最后一个点进行畸变校正
         if (frameCount >= skipFrameNum + 1) {
             frameCount = 0;
 
@@ -1992,7 +1996,7 @@ int main(int argc, char** argv)
 
     FeatureAssociation FA;
 
-    ros::Rate rate(100);
+    ros::Rate rate(200);
     while (ros::ok()) {
         ros::spinOnce();
 
