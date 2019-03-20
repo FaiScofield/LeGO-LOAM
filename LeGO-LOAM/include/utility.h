@@ -134,6 +134,7 @@ extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
 
 extern const bool saveDataForDebug = true;  // for debug
 
+
 struct smoothness_t{
     float value;
     size_t ind;

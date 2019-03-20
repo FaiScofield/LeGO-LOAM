@@ -222,9 +222,11 @@ private:
     float cRoll, sRoll, cPitch, sPitch, cYaw, sYaw, tX, tY, tZ;
     float ctRoll, stRoll, ctPitch, stPitch, ctYaw, stYaw, tInX, tInY, tInZ;
 
+
+    int frameNum = 0;
+    double tatalRunTime = 0.0;
+
 public:
-
-
 
     mapOptimization(): nh("~") {
         ISAM2Params parameters;
@@ -1460,6 +1462,8 @@ public:
 
                 timeLastProcessing = timeLaserOdometry;
 
+                frameNum += 2;
+                auto t1 = std::chrono::steady_clock::now();
                 //获取世界坐标系转换矩阵，一个初始的估计，需要后续优化
                 transformAssociateToMap();
 
@@ -1478,8 +1482,17 @@ public:
                 //检测到回环后矫正位姿
                 correctPoses();
 
-                publishTF();
+                // for debug
+                auto t2 = std::chrono::steady_clock::now();
+                if (saveDataForDebug) {
+                    double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+                    tatalRunTime += dt;
 
+                    if (frameNum % 50 == 0)
+                        ROS_INFO("[MapOptmization ]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+                }
+
+                publishTF();
 
                 publishKeyPosesAndFrames();
 

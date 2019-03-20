@@ -23,11 +23,12 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(GTSAM REQUIRED QUIET)
 find_package(PCL REQUIRED QUIET)
 find_package(OpenCV REQUIRED QUIET)
+find_package(fast REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS cloud_msgs
-  DEPENDS PCL
+  DEPENDS PCL OpenCV fast
 )
 
 include_directories(
@@ -36,6 +37,7 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${GTSAM_INCLUDE_DIR}
+    ${fast_INCLUDE_DIRS}
 )
 
 link_directories(
@@ -43,6 +45,7 @@ link_directories(
     ${OpenCV_LIBRARY_DIRS}
     ${PCL_LIBRARY_DIRS}
     ${GTSAM_LIBRARY_DIRS}
+    ${fast_LIBRARIES}
 )
 
 add_executable(imageProjection src/imageProjection.cpp)
@@ -61,3 +64,6 @@ target_link_libraries(transformFusion ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Ope
 
 add_executable(saveTrajectory src/saveTrajectory.cpp)
 target_link_libraries(saveTrajectory ${catkin_LIBRARIES})
+
+#add_executable(simpleVO src/simpleVO.cpp)
+#target_link_libraries(simpleVO ${catkin_LIBRARIES} {OpenCV_LIBRARIES} ${fast_LIBRARIES})

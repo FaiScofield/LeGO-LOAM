@@ -29,9 +29,6 @@
 #include "utility.h"
 #include <opencv2/highgui/highgui.hpp>
 
-int frameCount = 0;
-double tatalRunTime = 0.0;
-
 class ImageProjection{
 private:
     ros::NodeHandle nh;
@@ -80,6 +77,9 @@ private:
 
     uint16_t *queueIndX;    //索引队列
     uint16_t *queueIndY;
+
+    int frameNum = 0;
+    double tatalRunTime = 0.0;
 
 public:
     ImageProjection() : nh("~") {
@@ -161,11 +161,6 @@ public:
         pcl::fromROSMsg(*laserCloudMsg, *laserCloudIn);
     }
 
-    void outputRunTime(double dt) {
-        tatalRunTime += dt;
-        ROS_INFO("Frame %d time cost: %f, Averange time cost: %f", frameCount, dt, tatalRunTime/(double)frameCount);
-    }
-
     void saveImagePointcloud() {
         //save image
         cv::Mat rangeMatDisplay = cv::Mat(N_SCAN, Horizon_SCAN, CV_8UC1, cv::Scalar::all(0));;
@@ -178,8 +173,11 @@ public:
                 rangeMatDisplay.at<uchar>(i,j) = static_cast<uchar>(p);
             }
         }
-        if (cv::imwrite("/home/vance/test_frame_50_image.jpg", rangeMatDisplay))
+        if (cv::imwrite("/home/vance/test_frame_50_image.jpg", rangeMatDisplay)) {
+//            cv::imshow("Display", rangeMatDisplay);
+//            cv::waitKey(200);
             ROS_INFO("write image successed.");
+        }
         else
             ROS_ERROR("write image failed.");
 
@@ -202,7 +200,7 @@ public:
     }
 
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg) {
-        frameCount++;
+        frameNum++;
         auto t1 = std::chrono::steady_clock::now();
 
         copyPointCloud(laserCloudMsg);
@@ -214,9 +212,13 @@ public:
         auto t2 = std::chrono::steady_clock::now();
         double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
         if (saveDataForDebug) {
-            outputRunTime(dt);
-            if (frameCount == 50)
+            tatalRunTime += dt;
+            if (frameNum % 50 == 0) {
+                ROS_INFO("[ImageProjection]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+
+            if (frameNum == 50)
                 saveImagePointcloud();
+            }
         }
 
         publishCloud();

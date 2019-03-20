@@ -187,6 +187,10 @@ private:
 
     int frameCount;
 
+
+    int frameNum = 0;
+    double tatalRunTime = 0.0;
+
 public:
     FeatureAssociation(): nh("~") {
         subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/segmented_cloud", 1, &FeatureAssociation::laserCloudHandler, this);
@@ -1958,6 +1962,8 @@ public:
             return;
         }
 
+        frameNum++;
+        auto t1 = std::chrono::steady_clock::now();
         adjustDistortion();
 
         calculateSmoothness();
@@ -1978,6 +1984,16 @@ public:
         updateTransformation();
 
         integrateTransformation();
+
+        // for debug
+        auto t2 = std::chrono::steady_clock::now();
+        if (saveDataForDebug) {
+            double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+            tatalRunTime += dt;
+
+            if (frameNum % 50 == 0)
+                ROS_INFO("[FeatureAssociat]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+        }
 
         publishOdometry();
 
