@@ -87,8 +87,8 @@ extern const int N_SCAN = 64;
 extern const int Horizon_SCAN = 1800;
 extern const float ang_res_x = 0.2;
 extern const float ang_res_y = 26.8/float(N_SCAN-1);
-extern const float ang_bottom = 24.8;   // 15.1
-extern const int groundScanInd = 25;
+extern const float ang_bottom = 15.1;   // 15.1, 24.8
+extern const int groundScanInd = 20;
 
 // Ouster OS1-64
 // extern const int N_SCAN = 64;
@@ -99,7 +99,7 @@ extern const int groundScanInd = 25;
 // extern const int groundScanInd = 15;
 
 
-extern const bool loopClosureEnableFlag = false;
+extern const bool loopClosureEnableFlag = true;
 extern const double mappingProcessInterval = 0.3;   //建图处理间隔s
 
 extern const float scanPeriod = 0.1;
@@ -132,7 +132,7 @@ extern const float historyKeyframeFitnessScore = 0.3;
 
 extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
 
-extern const bool saveDataForDebug = true;  // for debug
+extern const bool saveDataForDebug = false;  // for debug
 
 
 struct smoothness_t{
@@ -158,9 +158,13 @@ struct PointXYZIRPYT
 } EIGEN_ALIGN16;
 
 POINT_CLOUD_REGISTER_POINT_STRUCT (PointXYZIRPYT,
-                                   (float, x, x) (float, y, y)
-                                   (float, z, z) (float, intensity, intensity)
-                                   (float, roll, roll) (float, pitch, pitch) (float, yaw, yaw)
+                                   (float, x, x)
+                                   (float, y, y)
+                                   (float, z, z)
+                                   (float, intensity, intensity)
+                                   (float, roll, roll)
+                                   (float, pitch, pitch)
+                                   (float, yaw, yaw)
                                    (double, time, time)
 )
 

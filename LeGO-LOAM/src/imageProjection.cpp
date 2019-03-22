@@ -216,8 +216,8 @@ public:
             if (frameNum % 50 == 0) {
                 ROS_INFO("[ImageProjection]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
 
-            if (frameNum == 50)
-                saveImagePointcloud();
+//            if (frameNum == 50)
+//                saveImagePointcloud();
             }
         }
 

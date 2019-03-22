@@ -65,5 +65,8 @@ target_link_libraries(transformFusion ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${Ope
 add_executable(saveTrajectory src/saveTrajectory.cpp)
 target_link_libraries(saveTrajectory ${catkin_LIBRARIES})
 
+add_executable(kittiVelodyneRawData2Bag src/kittiVelodyneRawData2Bag.cpp)
+target_link_libraries(kittiVelodyneRawData2Bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
+
 #add_executable(simpleVO src/simpleVO.cpp)
 #target_link_libraries(simpleVO ${catkin_LIBRARIES} {OpenCV_LIBRARIES} ${fast_LIBRARIES})

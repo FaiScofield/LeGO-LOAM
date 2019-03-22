@@ -1462,7 +1462,7 @@ public:
 
                 timeLastProcessing = timeLaserOdometry;
 
-                frameNum += 2;
+                frameNum++;
                 auto t1 = std::chrono::steady_clock::now();
                 //获取世界坐标系转换矩阵，一个初始的估计，需要后续优化
                 transformAssociateToMap();
@@ -1488,8 +1488,8 @@ public:
                     double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
                     tatalRunTime += dt;
 
-                    if (frameNum % 50 == 0)
-                        ROS_INFO("[MapOptmization ]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+                    if (frameNum % 25 == 0)
+                        ROS_INFO("[MapOptmization ]Keyframe %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
                 }
 
                 publishTF();

@@ -189,7 +189,8 @@ private:
 
 
     int frameNum = 0;
-    double tatalRunTime = 0.0;
+    double tatalRunTime = 0.0, tatalIterRunTime1 = 0.0, tatalIterRunTime2 = 0.0;
+    int iterCountSum1 = 0, iterCountSum2 = 0, iterCountSum = 0;
 
 public:
     FeatureAssociation(): nh("~") {
@@ -566,7 +567,7 @@ public:
 
             //如果收到IMU数据,使用IMU矫正点云畸变
             if (imuPointerLast >= 0) {
-               //点时间=点云时间+周期时间
+                //点时间=点云时间+周期时间
                 float pointTime = relTime * scanPeriod; //计算点的周期时间
                 imuPointerFront = imuPointerLastIteration;
                 //寻找是否有点云的时间戳小于IMU的时间戳的IMU位置:imuPointerFront
@@ -657,12 +658,23 @@ public:
                     imuAngularRotationZLast = imuAngularRotationZCur;
 
                     updateImuRollPitchYawStartSinCos();
-                } else {
-                    //计算之后每个点相对于第一个点的由于加减速非匀速运动产生的位移速度畸变，并对点云中的每个点位置信息重新补偿矫正
+                }
+                //如果不是第一个点，计算相对于第一个点的畸变，并对点其补偿矫正
+                else {
                     VeloToStartIMU();           //将Lidar运动速度转到IMU起始坐标系下
                     TransformToStartIMU(&point);//将点坐标转到起始IMU坐标系下
                 }
             }
+            ///如果没有IMU数据,使用匀速运动模型矫正
+//            else {
+//                //点时间=点云时间+周期时间
+//                double startTime, endTime;
+//                startTime = timeScanCur;
+//                endTime = startTime + 0.1;
+
+//                float pointTime = relTime * scanPeriod; //计算点的周期时间
+//            }
+
             segmentedCloud->points[i] = point;
         }
 
@@ -877,6 +889,10 @@ public:
       }
 
       if (pubSurfPointsLessFlat.getNumSubscribers() != 0) {
+//          for (auto i = 0; i < surfPointsLessFlat->size(); ++i) {
+//              if (surfPointsLessFlat->points[i].intensity > 31.0)
+//                  surfPointsLessFlat->points[i].y += 50.0;
+//          }
           pcl::toROSMsg(*surfPointsLessFlat, laserCloudOutMsg);
           laserCloudOutMsg.header.stamp = cloudHeader.stamp;
           laserCloudOutMsg.header.frame_id = "/camera";
@@ -1789,8 +1805,11 @@ public:
             return;
         }
 
+        auto t1 = std::chrono::steady_clock::now();
+        int iterCount1, iterCount2;
+
         //由平面点迭代计算位姿变换
-        for (int iterCount1 = 0; iterCount1 < 25; iterCount1++) {
+        for (/*int*/ iterCount1 = 0; iterCount1 < 25; iterCount1++) {
             laserCloudOri->clear(); //存放平面特征点，每次迭代前会清空
             coeffSel->clear();      //存放平面特征点的权重值，每次迭代前会清空
 
@@ -1801,9 +1820,9 @@ public:
             if (calculateTransformationSurf(iterCount1) == false)
                 break;
         }
-
+        auto t2 = std::chrono::steady_clock::now();
         //由边缘点迭代计算位姿变换
-        for (int iterCount2 = 0; iterCount2 < 25; iterCount2++) {
+        for (/*int */iterCount2 = 0; iterCount2 < 25; iterCount2++) {
             laserCloudOri->clear(); //存放边缘特征点，每次迭代前会清空
             coeffSel->clear();      //存放边缘特征点的权重值，每次迭代前会清空
 
@@ -1813,6 +1832,24 @@ public:
                 continue;
             if (calculateTransformationCorner(iterCount2) == false)
                 break;
+        }
+
+        //输出迭代信息
+        auto t3 = std::chrono::steady_clock::now();
+        double dt1 = 1000 * std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+        double dt2 = 1000 * std::chrono::duration_cast<std::chrono::duration<double> >(t3 - t2).count();
+        tatalIterRunTime1 += dt1;
+        tatalIterRunTime2 += dt2;
+        iterCountSum1 += iterCount1;
+        iterCountSum2 += iterCount2;
+
+        if (frameNum % 10 == 0) {
+            ROS_INFO("[FeatureAssociation]Frame %d iter Count: (%d, %d). Ave: (%f, %f)",
+                     frameNum, iterCount1, iterCount2,
+                     (float)iterCountSum1/frameNum, (float)iterCountSum2/frameNum);
+            ROS_INFO("iter tatal count: (%d, %d)", iterCountSum1, iterCountSum2);
+            ROS_INFO("iter time cost: (%f, %f), Ave: (%f, %f)", dt1, dt2,
+                     tatalIterRunTime1/frameNum, tatalIterRunTime2/frameNum);
         }
     }
 

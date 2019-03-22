@@ -182,7 +182,7 @@ public:
 
     //接收laserOdometry的信息
     void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr& laserOdometry) {
-        frameNum += 2;
+        frameNum++;
         auto t1 = std::chrono::steady_clock::now();
 
         currentHeader = laserOdometry->header;
@@ -227,7 +227,7 @@ public:
             tatalRunTime += dt;
 
             if (frameNum % 50 == 0)
-                ROS_INFO("[TransformFusion]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+                ROS_INFO("[TransformFusion]frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
         }
     }
 
