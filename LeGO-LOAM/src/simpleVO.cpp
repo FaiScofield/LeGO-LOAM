@@ -1,7 +1,16 @@
 #include "utility.h"
+#include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
-#include <fast/fast.h>
+
+#include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <opencv2/calib3d/calib3d.hpp>
+#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/flann/flann.hpp>
+
+using namespace std;
+using namespace cv;
 
 class SimpleVO {
 private:
@@ -15,41 +24,43 @@ private:
     std_msgs::Header imageDepthHeader;
 
     cv_bridge::CvImage bridge;
-    cv::Mat imageCurr, imageLast, imageShow, imageDepthCurr, imageDepthLast, fastLast;
-    cv::Mat kMat, dMat; // 相机参数矩阵
-    cv::Mat imageEig, imageTmp /*pyrCur, pyrLast*/; // 图像金字塔
-    std::vector<cv::Mat> imagePyrCurr, imagePyrLast;
+
+    float transformCur[6];
+    vector<float*> transforms;
+
+
+    Mat debugShowImage;
+    Mat imageCurr, imageLast, imageDepthCurr, imageDepthLast, imageShow, show;
+    Mat descripCurr, descripLast;
+//    Mat kMat, dMat; // 相机参数矩阵
+//    Mat imageEig, imageTmp;
 
     bool firstFrame, systemReady;
     bool newImageMsg, newImageDepthMsg;
     double timeImageCurr, timeImageDepthCurr;
 
-    float transformCur[6];
-    std::vector<float*> transforms;
+    const int iniThFAST = 25;
+    const int minThFAST = 15;
+//    const int maxFeatureNumPerSubregion = 20; // 每个子区域的最大特征数
+    const int xSubregionNum = 15; // 宽度上的区域划分数, for kitti
+    const int ySubregionNum = 8; // 高度上的区域划分数
+    const int totalSubregionNum = xSubregionNum * ySubregionNum; // 总区域数
+    const int xBoundary = 20, yBoundary = 20; // 左右和上下预留的边界像素量
 
-    const int nPyrLevels = 8;
-    const int iniThFAST = 20;
-    const int minThFAST = 7;
-    const size_t maxFeatureNumPerSubregion = 20; // 每个子区域的最大特征数
-    const size_t xSubregionNum = 8; // 宽度上的区域划分数, for kitti
-    const size_t ySubregionNum = 6; // 高度上的区域划分数
-    const size_t totalSubregionNum = xSubregionNum * ySubregionNum; // 总区域数
-    const size_t xBoundary = 20, yBoundary = 20; // 左右和上下预留的边界像素量
-
-    const double subregionWidth = (640 - 2 * xBoundary) / static_cast<double>(xSubregionNum); // 单个子区域的宽度
-    const double subregionHeight = (480 - 2 * yBoundary) / static_cast<double>(ySubregionNum); // 单个子区域的高度
-    const double maxTrackDis = 100.0;  // 光流最大距离
-
-    std::vector<std::vector<cv::KeyPoint>> featuresCurr, featuresLast; // 存放两帧的特征点
-    std::vector<cv::KeyPoint> featuresSub;    // 存放图像某个子区域内检测到的特征点
-    std::vector<cv::KeyPoint> toDistributeFeatures;
-    std::vector<unsigned char> featuresStatus; // 光流追踪到的特征点的标志
-//    std::vector<float> featucv::resError;    // 光流追踪到的特征点的误差
-
+    const int subregionWidth = static_cast<int>((640 - 2 * xBoundary) / xSubregionNum);
+    const int subregionHeight = static_cast<int>((480 - 2 * yBoundary) / ySubregionNum);
+    vector<size_t> subregionFeatureNum; // 每个子区域的特征点数
     size_t featuresIndFromStart; // 特征点的相对第一个点的索引
     size_t totalFeatureNum; // 总特征点数
-    std::vector<size_t> featuresInd; // 所有特征点的相对索引
-    std::vector<size_t> subregionFeatureNum; // 每个子区域的特征点数
+
+    vector<KeyPoint> featuresCurr, featuresLast; // 存放两帧的特征点
+    vector<KeyPoint> featuresSub;    // 存放图像某个子区域内检测到的特征点
+    vector<DMatch> goodMatches, RansacMatches;
+
+
+
+
+    size_t frameNum = -1;
 
 public:
     SimpleVO(): nh("~") {
@@ -57,20 +68,27 @@ public:
         subImageDepthMsg = nh.subscribe<sensor_msgs::Image>("/camera/depth_registered/image_raw", 1, &SimpleVO::imageDepthMsgHandler, this);
 
         pubVisualOdom = nh.advertise<nav_msgs::Odometry>("/simpleVO", 5);
+        pubImageShow = nh.advertise<sensor_msgs::Image>("/image_show", 5);
 
         for (int i = 0; i < 6; ++i)
             transformCur[i] = 0;
 
-//        kMat = cv::Mat(3, 3, CV_64FC1, kImage);
-//        dMat = cv::Mat(4, 1, CV_64FC1, dImage);
+//        kMat = Mat(3, 3, CV_64FC1, kImage);
+//        dMat = Mat(4, 1, CV_64FC1, dImage);
+        imageCurr = Mat(480, 640, CV_8UC1, Scalar::all(0));
+        imageLast = Mat(480, 640, CV_8UC1, Scalar::all(0));
+        imageDepthCurr = Mat(480, 640, CV_32FC1, Scalar::all(0.0));
+        imageDepthLast = Mat(480, 640, CV_32FC1, Scalar::all(0.0));
 
         firstFrame = true;
         systemReady = true;
+        newImageMsg = false;
+        newImageDepthMsg = false;
+
+
         featuresIndFromStart = 0; // 特征点的相对第一个点的索引
         totalFeatureNum = 0; // 一帧图像的总特征点数
-        subregionFeatureNum.resize(static_cast<size_t>(totalSubregionNum), 0); // 每个子区域的特征点数
-
-
+        subregionFeatureNum.resize(static_cast<size_t>(totalSubregionNum), 0);
     }
 
     void imageMsgHandler(const sensor_msgs::Image::ConstPtr& imageMsg) {
@@ -78,7 +96,16 @@ public:
 
         timeImageCurr = imageHeader.stamp.toSec();
 
-        imageCurr = cv_bridge::toCvShare(imageMsg, "mono8")->image;
+        try {
+            imageShow = cv_bridge::toCvShare(imageMsg, "bgr8")->image;
+            show = imageShow.clone();
+        } catch (cv_bridge::Exception& e) {
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            newImageMsg = false;
+            return;
+        }
+        cvtColor(imageShow, imageCurr, CV_BGR2GRAY);
+        debugShowImage = imageShow.clone();
 
         newImageMsg = true;
     }
@@ -88,85 +115,173 @@ public:
 
         timeImageDepthCurr = imageDepthHeader.stamp.toSec();
 
-        imageDepthCurr = cv_bridge::toCvShare(imageDepthMsg, "mono8")->image;
+        try {
+            imageDepthCurr = cv_bridge::toCvShare(imageDepthMsg, sensor_msgs::image_encodings::TYPE_32FC1)->image;
+        } catch (cv_bridge::Exception& e) {
+            ROS_ERROR("cv_bridge exception: %s", e.what());
+            newImageDepthMsg = false;
+            return;
+        }
 
         newImageDepthMsg = true;
     }
 
-    void fastDetect(const std::vector<cv::Mat>& imagePyr, std::vector<std::vector<cv::KeyPoint>>& AllFeatures) {
-        AllFeatures.resize(nPyrLevels);
-
-
-
+    void computeAngle(const Mat& image, vector<KeyPoint>& keypoints) {
+        int half_patch_size = 8;
+        for (auto &kp : keypoints) {
+            int m_10 = 0, m_01 = 0;
+            for (int u = -half_patch_size; u <= half_patch_size-1; ++u) {
+                for (int v = -half_patch_size; v <= half_patch_size-1; ++v) {
+                    int u1 = cvRound(kp.pt.x) + u, v1 = cvRound(kp.pt.y) + v;
+                    if (u1 >= 0 && u1 < image.cols && v1 >= 0 && v1 < image.rows) {
+                        m_10 += u  * image.at<uchar>(v1, u1);
+                        m_01 += v  * image.at<uchar>(v1, u1);
+                    } else continue;
+                }
+            }
+            kp.angle = fastAtan2((float)m_01, (float)m_10);
+        }
+        return;
     }
 
     /// 为图像计算特征点，更新了 totalFeatureNum 和 subregionFeatureNum 两个变量的值
     void extractFeatures() {
-        featuresIndFromStart = totalFeatureNum = 0;
         subregionFeatureNum.resize(totalSubregionNum, 0);
-        if (!featuresSub.empty()) featuresSub.clear();
-        if (!featuresInd.empty()) featuresInd.clear();
-        if (!featuresCurr.empty()) featuresCurr.clear();
+        featuresCurr.clear();
 
-        for (size_t level = 0; level < nPyrLevels; ++level) {
-            // 对每个子区域进行特征提取，分区域有助于特征点均匀分布
-            for (size_t i = 0; i < xSubregionNum; i++) {
-                for (size_t j = 0; j < ySubregionNum; j++) {
-                    size_t ind = xSubregionNum * i + j;  // ind指向当前的subregion编号
-                    size_t numToFind = maxFeatureNumPerSubregion;
+        // 对每个子区域进行特征提取，分区域有助于特征点均匀分布
+        for (int j = 0; j < ySubregionNum; j++) {       // j-row
+            for (int i = 0; i < xSubregionNum; i++) {   // i-col
+                featuresSub.clear();
 
-                    size_t subregionLeft = xBoundary + subregionWidth * i;
-                    size_t subregionTop = yBoundary + subregionHeight * j;
+                int ind = xSubregionNum * j + i;  // ind指向当前的subregion编号
+                int subregionLeft = xBoundary + subregionWidth * i;
+                int subregionTop = yBoundary + subregionHeight * j;
 
-//                    std::vector<cv::KeyPoint> featuresSub;
-                    cv::FAST(imagePyrCurr[level].rowRange(subregionTop, subregionTop+subregionHeight).colRange(subregionLeft, subregionLeft+subregionWidth),
-                             featuresSub, iniThFAST, true);
-                    if (featuresSub.empty()) {
-                        cv::FAST(imagePyrCurr[level].rowRange(subregionTop, subregionTop+subregionHeight).colRange(subregionLeft, subregionLeft+subregionWidth),
-                                 featuresSub, minThFAST, true);
-                    }
+                FAST(imageCurr.rowRange(subregionTop, subregionTop+subregionHeight).colRange(subregionLeft, subregionLeft+subregionWidth),
+                     featuresSub, iniThFAST, true,
+                     FastFeatureDetector::TYPE_9_16);
 
-                    if (!featuresSub.empty()) {
-                        for (auto fit = featuresSub.begin(); fit != featuresSub.end(); fit++) {
-                            (*fit).pt.x += i * subregionWidth;
-                            (*fit).pt.y += j * subregionHeight;
-                            toDistributeFeatures.push_back(*fit);
+                if (featuresSub.empty()) {
+                    FAST(imageCurr.rowRange(subregionTop, subregionTop+subregionHeight).colRange(subregionLeft, subregionLeft+subregionWidth),
+                         featuresSub, minThFAST, true,
+                         FastFeatureDetector::TYPE_9_16);
+                }
+
+                if (!featuresSub.empty()) {
+                    for (auto fit = featuresSub.begin(); fit != featuresSub.end(); fit++) {
+                        (*fit).pt.x += subregionLeft;   // x - col
+                        (*fit).pt.y += subregionTop;    // y - row
+                        if ((*fit).pt.x < 0 || (*fit).pt.x >= 640 ||
+                            (*fit).pt.y < 0 || (*fit).pt.y >= 480) {
+                            ROS_WARN("Delete a keypoint for out of range.");
+                            continue;
                         }
+
+                        featuresCurr.push_back(*fit);
                     }
                 }
+                subregionFeatureNum[ind] = featuresSub.size();
             }
+        }
 
-            std::vector<cv::KeyPoint> &keypoints = featuresCurr[level];
-            keypoints.reserve(200);
-//            keypoints = DistributeOctTree(toDistributeFeatures, minBorderX, maxBorderX,
-//                                          minBorderY, maxBorderY, mnFeaturesPerLevel[level], level);
+//        computeAngle(imageCurr, featuresCurr);
 
-//            const int scaledPatchSize = PATCH_SIZE * mvScaleFactor[level];
+        Ptr<ORB> orb = ORB::create();
+        orb->compute(imageCurr, featuresCurr, descripCurr);
 
-            // Add border to coordinates and scale information
-            const int nkps = keypoints.size();
-            for (int i = 0; i < nkps; i++) {
-                keypoints[i].pt.x += subregionWidth;
-                keypoints[i].pt.y += subregionHeight;
-                keypoints[i].octave = level;
-                keypoints[i].size = 1 / pow(1.2, level);
-            }
+//        ROS_INFO("Frame %d, Features: %d", frameNum, featuresCurr.size());
+    }
+
+//    void calculateTransformation() {
+//        return;
+//    }
+
+//    void publishOdometry() {
+//        return;
+//    }
+
+    void publishOutputImage() {
+        for (auto& fea : featuresCurr) {
+            Point2f pixel = fea.pt;
+            circle(imageShow, pixel, 2, Scalar(0, 255, 0), -1);
+        }
+
+        bridge.image = imageShow;
+        bridge.header = imageHeader;
+        bridge.encoding = "bgr8";
+        pubImageShow.publish(bridge.toImageMsg());
+    }
+
+    void featureMatching() {
+//        vector<DMatch> matches;
+        vector<vector<DMatch>> knnMatches;
+        goodMatches.clear();
+        RansacMatches.clear();
+
+//        cv::Mat desp_map;
+//        for (int i = 0; i < descripCurr.size(); ++i) {
+//            descripCurrMat = Mat::zeros(256, descripCurr.size(), CV_8UC1);
+//            for (int j = 0; i < 256; ++j)
+//                descripCurrMat.at<uchar>(j, i) = descripCurr[i][j];
+//        }
+
+        FlannBasedMatcher matcher(new cv::flann::LshIndexParams(20, 10, 2));
+        matcher.knnMatch(descripLast, descripCurr, knnMatches, 2);
+
+        // 选择最好的匹配点
+        for (size_t r = 0; r < knnMatches.size(); ++r) {
+            if (knnMatches[r].size() < 2)
+                continue;
+            if (knnMatches[r][0].distance > 0.9*knnMatches[r][1].distance )
+                continue;
+            goodMatches.push_back(knnMatches[r][0]);
+        }
+        ROS_INFO("good/all matches size: %d / %d", goodMatches.size(), knnMatches.size());
+
+        // RANSAC
+        vector<Point2f> k1, k2;
+        vector<uchar> inliners;
+        for (size_t i = 0; i < goodMatches.size(); i++) {
+            int q = goodMatches[i].queryIdx;
+            int t = goodMatches[i].trainIdx;
+            k1.push_back(featuresLast[q].pt);
+            k2.push_back(featuresCurr[t].pt);
+        }
+        Mat F = findFundamentalMat(k1, k2, inliners, FM_RANSAC);
+        for (size_t i = 0; i < goodMatches.size(); i++) {
+            if (inliners[i])
+                RansacMatches.push_back(goodMatches[i]);
         }
     }
 
-    void calculateTransformation() {
+    //交换前后帧数据
+    void swapData() {
+        try {
+            imageLast.release();
+            imageLast = imageCurr.clone();
+//            imageDepthLast.release();
+//            imageDepthLast = imageDepthCurr.clone(); //深度图像数据交换会segfault
+    //        imageCurr.copyTo(imageLast);
+    //        imageDepthCurr.copyTo(imageDepthLast);
 
+            featuresLast.swap(featuresCurr);
+
+            descripLast.release();
+            descripLast = descripCurr.clone();
+        } catch (cv::Exception& e) {
+            ROS_ERROR("cv exception: %s", e.what());
+//            systemReady = false;
+            return;
+        }
+
+
+        systemReady = true;
     }
-
-    void publishOdometry() {
-
-
-    }
-
 
     void run() {
         if (systemReady && newImageMsg && newImageDepthMsg &&
-            std::abs(timeImageCurr - timeImageDepthCurr) < 0.05) {
+            abs(timeImageCurr - timeImageDepthCurr) < 0.05) {
 
             systemReady = false;
             newImageMsg = false;
@@ -174,11 +289,66 @@ public:
         } else
             return;
 
+        frameNum++;
+
         extractFeatures();
 
-        calculateTransformation();
+        publishOutputImage();
 
-        publishOdometry();
+        if (firstFrame) {
+            swapData();
+            firstFrame = false;
+            return;
+        }
+
+        featureMatching();
+
+        //        if (saveDataForDebug) {
+        //            drawKeypoints(imageCurr, featuresCurr, debugShowImage, Scalar::all(-1));
+        //            imshow("features", debugShowImage);
+        //            waitKey(10);
+        //        }
+
+//        calculateTransformation();
+
+//        publishOdometry();
+
+//        if (saveDataForDebug) {
+//            cv::drawMatches( rgb1, kp1, rgb2, kp2, matches, imgMatches );
+//        }
+
+        if (saveDataForDebug && frameNum < 50) {
+            ROS_INFO("Features current: %d, and last: %d", featuresCurr.size(), featuresLast.size());
+            ROS_INFO("Good Matches: %d", goodMatches.size());
+
+            Mat showMatches, showMatches2;
+            drawMatches(imageLast, featuresLast, imageCurr, featuresCurr,
+                        goodMatches, showMatches);
+            drawMatches(imageLast, featuresLast, imageCurr, featuresCurr,
+                        RansacMatches, showMatches2);
+
+//            imshow("Matches", showMatches);
+//            waitKey(1000);
+            stringstream ss, ss2, ss3, ss4;
+            ss << "/home/vance/matches/" << frameNum << ".jpg";
+            ss2 << "/home/vance/matches/" << frameNum << "_ransac.jpg";
+            imwrite(ss.str(), showMatches);
+            imwrite(ss2.str(), showMatches2);
+
+            ss3 << "/home/vance/matches/frame_" << frameNum << "_sep.jpg";
+            imwrite(ss3.str(), imageShow);
+
+            vector<KeyPoint> featureTmp;
+            FAST(imageCurr, featureTmp, 1.5*iniThFAST, true, FastFeatureDetector::TYPE_9_16);
+            for (auto& fea : featureTmp) {
+                Point2f pixel = fea.pt;
+                circle(show, pixel, 2, Scalar(0, 255, 0), -1);
+            }
+            ss4 << "/home/vance/matches/frame_" << frameNum << ".jpg";
+            imwrite(ss4.str(), show);
+        }
+
+        swapData();
     }
 };
 
@@ -189,13 +359,13 @@ int main(int argc, char **argv)
 
     ROS_INFO("\033[1;32m---->\033[0m Simple Visual Odometry Started.");
 
-    SimpleVO svo;
+    SimpleVO simvo;
 
-    ros::Rate rate(200);
+    ros::Rate rate(30);
     while (ros::ok()) {
         ros::spinOnce();
 
-        svo.run();
+        simvo.run();
 
         rate.sleep();
     }

@@ -23,12 +23,12 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(GTSAM REQUIRED QUIET)
 find_package(PCL REQUIRED QUIET)
 find_package(OpenCV REQUIRED QUIET)
-find_package(fast REQUIRED)
+#find_package(fast REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
   CATKIN_DEPENDS cloud_msgs
-  DEPENDS PCL OpenCV fast
+  DEPENDS PCL OpenCV
 )
 
 include_directories(
@@ -37,15 +37,15 @@ include_directories(
     ${PCL_INCLUDE_DIRS}
     ${OpenCV_INCLUDE_DIRS}
     ${GTSAM_INCLUDE_DIR}
-    ${fast_INCLUDE_DIRS}
+#    ${fast_INCLUDE_DIRS}
 )
 
 link_directories(
-    include
+#    include
     ${OpenCV_LIBRARY_DIRS}
     ${PCL_LIBRARY_DIRS}
     ${GTSAM_LIBRARY_DIRS}
-    ${fast_LIBRARIES}
+#    ${fast_LIBRARIES}
 )
 
 add_executable(imageProjection src/imageProjection.cpp)
@@ -68,5 +68,8 @@ target_link_libraries(saveTrajectory ${catkin_LIBRARIES})
 add_executable(kittiVelodyneRawData2Bag src/kittiVelodyneRawData2Bag.cpp)
 target_link_libraries(kittiVelodyneRawData2Bag ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 
-#add_executable(simpleVO src/simpleVO.cpp)
-#target_link_libraries(simpleVO ${catkin_LIBRARIES} {OpenCV_LIBRARIES} ${fast_LIBRARIES})
+add_executable(simpleVO src/simpleVO.cpp)
+target_link_libraries(simpleVO ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(testmatch src/testmatch.cpp)
+target_link_libraries(testmatch ${catkin_LIBRARIES} ${OpenCV_LIBS})

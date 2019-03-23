@@ -132,7 +132,7 @@ extern const float historyKeyframeFitnessScore = 0.3;
 
 extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
 
-extern const bool saveDataForDebug = false;  // for debug
+extern const bool saveDataForDebug = true;  // for debug
 
 
 struct smoothness_t{

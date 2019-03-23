@@ -187,10 +187,8 @@ private:
 
     int frameCount;
 
-
     int frameNum = 0;
-    double tatalRunTime = 0.0, tatalIterRunTime1 = 0.0, tatalIterRunTime2 = 0.0;
-    int iterCountSum1 = 0, iterCountSum2 = 0, iterCountSum = 0;
+    double tatalRunTime = 0.0;
 
 public:
     FeatureAssociation(): nh("~") {
@@ -1801,15 +1799,12 @@ public:
     void updateTransformation() {
         //边缘点数量小于10，或平面点数量小于100则跳过
         if (laserCloudCornerLastNum < 10 || laserCloudSurfLastNum < 100) {
-            ROS_WARN("Too less features...");
+            ROS_WARN("Too less features for update transformation...");
             return;
         }
 
-        auto t1 = std::chrono::steady_clock::now();
-        int iterCount1, iterCount2;
-
         //由平面点迭代计算位姿变换
-        for (/*int*/ iterCount1 = 0; iterCount1 < 25; iterCount1++) {
+        for (int iterCount1 = 0; iterCount1 < 25; iterCount1++) {
             laserCloudOri->clear(); //存放平面特征点，每次迭代前会清空
             coeffSel->clear();      //存放平面特征点的权重值，每次迭代前会清空
 
@@ -1820,9 +1815,9 @@ public:
             if (calculateTransformationSurf(iterCount1) == false)
                 break;
         }
-        auto t2 = std::chrono::steady_clock::now();
+
         //由边缘点迭代计算位姿变换
-        for (/*int */iterCount2 = 0; iterCount2 < 25; iterCount2++) {
+        for (int iterCount2 = 0; iterCount2 < 25; iterCount2++) {
             laserCloudOri->clear(); //存放边缘特征点，每次迭代前会清空
             coeffSel->clear();      //存放边缘特征点的权重值，每次迭代前会清空
 
@@ -1832,24 +1827,6 @@ public:
                 continue;
             if (calculateTransformationCorner(iterCount2) == false)
                 break;
-        }
-
-        //输出迭代信息
-        auto t3 = std::chrono::steady_clock::now();
-        double dt1 = 1000 * std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-        double dt2 = 1000 * std::chrono::duration_cast<std::chrono::duration<double> >(t3 - t2).count();
-        tatalIterRunTime1 += dt1;
-        tatalIterRunTime2 += dt2;
-        iterCountSum1 += iterCount1;
-        iterCountSum2 += iterCount2;
-
-        if (frameNum % 10 == 0) {
-            ROS_INFO("[FeatureAssociation]Frame %d iter Count: (%d, %d). Ave: (%f, %f)",
-                     frameNum, iterCount1, iterCount2,
-                     (float)iterCountSum1/frameNum, (float)iterCountSum2/frameNum);
-            ROS_INFO("iter tatal count: (%d, %d)", iterCountSum1, iterCountSum2);
-            ROS_INFO("iter time cost: (%f, %f), Ave: (%f, %f)", dt1, dt2,
-                     tatalIterRunTime1/frameNum, tatalIterRunTime2/frameNum);
         }
     }
 
