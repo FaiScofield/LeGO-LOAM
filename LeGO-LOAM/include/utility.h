@@ -126,11 +126,11 @@ extern const float nearestFeatureSearchSqDist = 25;
 extern const float surroundingKeyframeSearchRadius = 50.0;  //关键帧搜索半径m
 extern const int   surroundingKeyframeSearchNum = 50;       //关键帧搜索数量
 
-extern const float historyKeyframeSearchRadius = 5.0;       //历史帧搜索半径m
-extern const int   historyKeyframeSearchNum = 25;
+extern const float historyKeyframeSearchRadius = 10.0;       //历史帧搜索半径m,5.0
+extern const int   historyKeyframeSearchNum = 25;           //±25帧的数据拿来做回环优化
 extern const float historyKeyframeFitnessScore = 0.3;
 
-extern const float globalMapVisualizationSearchRadius = 1000.0; // 500
+extern const float globalMapVisualizationSearchRadius = 2000.0; // 500
 
 extern const bool saveDataForDebug = true;  // for debug
 

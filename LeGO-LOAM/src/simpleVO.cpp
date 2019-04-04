@@ -58,9 +58,7 @@ private:
     vector<DMatch> goodMatches, RansacMatches;
 
 
-
-
-    size_t frameNum = -1;
+    size_t frameNum = 0;
 
 public:
     SimpleVO(): nh("~") {
@@ -190,7 +188,7 @@ public:
         Ptr<ORB> orb = ORB::create();
         orb->compute(imageCurr, featuresCurr, descripCurr);
 
-//        ROS_INFO("Frame %d, Features: %d", frameNum, featuresCurr.size());
+        ROS_INFO("Frame %d, Features: %d", frameNum, featuresCurr.size());
     }
 
 //    void calculateTransformation() {
@@ -237,7 +235,6 @@ public:
                 continue;
             goodMatches.push_back(knnMatches[r][0]);
         }
-        ROS_INFO("good/all matches size: %d / %d", goodMatches.size(), knnMatches.size());
 
         // RANSAC
         vector<Point2f> k1, k2;
@@ -253,6 +250,8 @@ public:
             if (inliners[i])
                 RansacMatches.push_back(goodMatches[i]);
         }
+
+         ROS_INFO("RANSAC/good/all matches size: %d / %d / %d", RansacMatches.size(), goodMatches.size(), knnMatches.size());
     }
 
     //交换前后帧数据
@@ -301,25 +300,15 @@ public:
             return;
         }
 
-        featureMatching();
 
-        //        if (saveDataForDebug) {
-        //            drawKeypoints(imageCurr, featuresCurr, debugShowImage, Scalar::all(-1));
-        //            imshow("features", debugShowImage);
-        //            waitKey(10);
-        //        }
+        featureMatching();
 
 //        calculateTransformation();
 
 //        publishOdometry();
 
-//        if (saveDataForDebug) {
-//            cv::drawMatches( rgb1, kp1, rgb2, kp2, matches, imgMatches );
-//        }
-
-        if (saveDataForDebug && frameNum < 50) {
-            ROS_INFO("Features current: %d, and last: %d", featuresCurr.size(), featuresLast.size());
-            ROS_INFO("Good Matches: %d", goodMatches.size());
+        if (saveDataForDebug && frameNum > 200 && frameNum % 20 == 0) {
+//            ROS_INFO("Features current: %d, and last: %d", featuresCurr.size(), featuresLast.size());
 
             Mat showMatches, showMatches2;
             drawMatches(imageLast, featuresLast, imageCurr, featuresCurr,

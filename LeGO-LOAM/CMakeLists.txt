@@ -18,7 +18,16 @@ find_package(catkin REQUIRED COMPONENTS
   geometry_msgs
   nav_msgs
   cloud_msgs
+
+  message_generation
 )
+
+add_service_files(
+    FILES
+    saveMap.srv
+)
+
+generate_messages()
 
 find_package(GTSAM REQUIRED QUIET)
 find_package(PCL REQUIRED QUIET)
@@ -58,6 +67,7 @@ target_link_libraries(featureAssociation ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${
 
 add_executable(mapOptmization src/mapOptmization.cpp)
 target_link_libraries(mapOptmization ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES} gtsam)
+add_dependencies(mapOptmization lego_loam_gencpp)
 
 add_executable(transformFusion src/transformFusion.cpp)
 target_link_libraries(transformFusion ${catkin_LIBRARIES} ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
@@ -73,3 +83,7 @@ target_link_libraries(simpleVO ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
 add_executable(testmatch src/testmatch.cpp)
 target_link_libraries(testmatch ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+add_executable(saveMapService src/saveMapService.cpp)
+target_link_libraries(saveMapService ${catkin_LIBRARIES})
+add_dependencies(saveMapService lego_loam_gencpp)

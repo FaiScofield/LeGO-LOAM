@@ -33,6 +33,7 @@
 //      IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS). October 2018.
 
 #include "utility.h"
+#include <pcl/io/pcd_io.h>
 
 class FeatureAssociation{
 
@@ -49,6 +50,7 @@ private:
     ros::Publisher pubSurfPointsFlat;
     ros::Publisher pubSurfPointsLessFlat;
 
+    pcl::PointCloud<PointType>::Ptr undistortionCloud;
     pcl::PointCloud<PointType>::Ptr segmentedCloud;
     pcl::PointCloud<PointType>::Ptr outlierCloud;
 
@@ -143,6 +145,7 @@ private:
     ros::Publisher pubLaserCloudSurfLast;
     ros::Publisher pubLaserOdometry;
     ros::Publisher pubOutlierCloudLast;
+    ros::Publisher pubUndistortionCloud;
 
     int skipFrameNum;       //跳帧数1，控制发给laserMapping的频率
     bool systemInitedLM;    //LM准备好的标注位
@@ -207,6 +210,9 @@ public:
         pubOutlierCloudLast = nh.advertise<sensor_msgs::PointCloud2>("/outlier_cloud_last", 2);
         pubLaserOdometry = nh.advertise<nav_msgs::Odometry> ("/laser_odom_to_init", 5);
 
+        pubUndistortionCloud = nh.advertise<sensor_msgs::PointCloud2>("/laser_cloud_undistortion", 1);
+
+
         initializationValue();
     }
 
@@ -215,6 +221,7 @@ public:
 
         downSizeFilter.setLeafSize(0.2, 0.2, 0.2);
 
+        undistortionCloud.reset(new pcl::PointCloud<PointType>());
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
         outlierCloud.reset(new pcl::PointCloud<PointType>());
 
@@ -502,7 +509,9 @@ public:
         timeNewSegmentedCloud = timeScanCur;
 
         segmentedCloud->clear();
+//        undistortionCloud->clear();
         pcl::fromROSMsg(*laserCloudMsg, *segmentedCloud);
+//        pcl::fromROSMsg(*laserCloudMsg, *undistortionCloud);
 
         newSegmentedCloud = true;
     }
@@ -664,13 +673,13 @@ public:
                 }
             }
             ///如果没有IMU数据,使用匀速运动模型矫正
-//            else {
-//                //点时间=点云时间+周期时间
-//                double startTime, endTime;
-//                startTime = timeScanCur;
-//                endTime = startTime + 0.1;
+//            else if (saveDataForDebug &&
+//                     pubUndistortionCloud.getNumSubscribers() != 0){
 
-//                float pointTime = relTime * scanPeriod; //计算点的周期时间
+//                PointType pp;
+//                TransformToEnd(&point, &pp);
+
+//                undistortionCloud->points[i] = pp;
 //            }
 
             segmentedCloud->points[i] = point;
@@ -896,6 +905,27 @@ public:
           laserCloudOutMsg.header.frame_id = "/camera";
           pubSurfPointsLessFlat.publish(laserCloudOutMsg);
       }
+
+
+      if (pubUndistortionCloud.getNumSubscribers() != 0) {
+          pcl::toROSMsg(*undistortionCloud, laserCloudOutMsg);
+          laserCloudOutMsg.header.stamp = cloudHeader.stamp;
+          laserCloudOutMsg.header.frame_id = "/camera";
+          pubUndistortionCloud.publish(laserCloudOutMsg);
+      }
+
+      //保存数据
+//      if (saveDataForDebug && frameNum % 100 == 0) {
+//          stringstream ss1, ss2;
+//          ss1 << "/home/vance/matches/" << frameNum << "_segCloud.pcd";
+//          ss2 << "/home/vance/matches/" << frameNum << "_undisCloud.pcd";
+
+//          pcl::io::savePCDFileASCII(ss1.str(), *segmentedCloud);
+//          pcl::io::savePCDFileASCII(ss2.str(), *undistortionCloud);
+
+//          ROS_INFO("Save cloud data to %s", ss2.str().c_str());
+//      }
+
     }
 
     //当前点云中的点相对第一个点去除因匀速运动产生的畸变，效果相当于得到在点云扫描开始位置静止扫描得到的点云
@@ -1100,7 +1130,7 @@ public:
 
     //寻找对应的边缘点
     void findCorrespondingCornerFeatures(int iterCount) {
-                int cornerPointsSharpNum = cornerPointsSharp->points.size();
+        int cornerPointsSharpNum = cornerPointsSharp->points.size();
 
         //处理当前点云中的曲率最大的特征点,从上个点云中曲率比较大的特征点中找两个最近距离点，一个点使用kd-tree查找，另一个根据找到的点在其相邻线找另外一个最近距离的点
         for (int i = 0; i < cornerPointsSharpNum; i++) {

@@ -41,8 +41,10 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/Values.h>
-
 #include <gtsam/nonlinear/ISAM2.h>
+
+#include <pcl/io/pcd_io.h>
+#include "lego_loam/saveMap.h"
 
 using namespace gtsam;
 
@@ -99,8 +101,6 @@ private:
 
     pcl::PointCloud<PointType>::Ptr cloudKeyPoses3D;
     pcl::PointCloud<PointTypePose>::Ptr cloudKeyPoses6D;
-
-
 
     pcl::PointCloud<PointType>::Ptr surroundingKeyPoses;    //当前帧半径50m内的关键帧
     pcl::PointCloud<PointType>::Ptr surroundingKeyPosesDS;
@@ -222,9 +222,10 @@ private:
     float cRoll, sRoll, cPitch, sPitch, cYaw, sYaw, tX, tY, tZ;
     float ctRoll, stRoll, ctPitch, stPitch, ctYaw, stYaw, tInX, tInY, tInZ;
 
-
+    int numLoopClosure = 0;
     int frameNum = 0;
     double tatalRunTime = 0.0;
+//    double lastMessageTime = 9999999999.0;
 
 public:
 
@@ -618,6 +619,7 @@ public:
         laserCloudOutlierLast->clear();
         pcl::fromROSMsg(*msg, *laserCloudOutlierLast);
         newLaserCloudOutlierLast = true;
+//        lastMessageTime = ros::Time::now().toSec();
     }
 
     void laserCloudCornerLastHandler(const sensor_msgs::PointCloud2ConstPtr& msg) {
@@ -1296,7 +1298,6 @@ public:
 
     void scan2MapOptimization() {
         if (laserCloudCornerFromMapDSNum > 10 && laserCloudSurfFromMapDSNum > 100) {
-
             kdtreeCornerFromMap->setInputCloud(laserCloudCornerFromMapDS);
             kdtreeSurfFromMap->setInputCloud(laserCloudSurfFromMapDS);
 
@@ -1414,28 +1415,30 @@ public:
     }
 
     void correctPoses() {
-      if (aLoopIsClosed == true) {
+        if (aLoopIsClosed == true) {
+            numLoopClosure++;
+            ROS_INFO("Number Times of Loop Closure: %d", numLoopClosure);
+
             recentCornerCloudKeyFrames. clear();
             recentSurfCloudKeyFrames.   clear();
             recentOutlierCloudKeyFrames.clear();
 
             int numPoses = isamCurrentEstimate.size();
-      for (int i = 0; i < numPoses; ++i)
-      {
-        cloudKeyPoses3D->points[i].x = isamCurrentEstimate.at<Pose3>(i).translation().y();
-        cloudKeyPoses3D->points[i].y = isamCurrentEstimate.at<Pose3>(i).translation().z();
-        cloudKeyPoses3D->points[i].z = isamCurrentEstimate.at<Pose3>(i).translation().x();
+            for (int i = 0; i < numPoses; ++i) {
+                cloudKeyPoses3D->points[i].x = isamCurrentEstimate.at<Pose3>(i).translation().y();
+                cloudKeyPoses3D->points[i].y = isamCurrentEstimate.at<Pose3>(i).translation().z();
+                cloudKeyPoses3D->points[i].z = isamCurrentEstimate.at<Pose3>(i).translation().x();
 
-        cloudKeyPoses6D->points[i].x = cloudKeyPoses3D->points[i].x;
-              cloudKeyPoses6D->points[i].y = cloudKeyPoses3D->points[i].y;
-              cloudKeyPoses6D->points[i].z = cloudKeyPoses3D->points[i].z;
-              cloudKeyPoses6D->points[i].roll  = isamCurrentEstimate.at<Pose3>(i).rotation().pitch();
-              cloudKeyPoses6D->points[i].pitch = isamCurrentEstimate.at<Pose3>(i).rotation().yaw();
-              cloudKeyPoses6D->points[i].yaw   = isamCurrentEstimate.at<Pose3>(i).rotation().roll();
-      }
+                cloudKeyPoses6D->points[i].x = cloudKeyPoses3D->points[i].x;
+                cloudKeyPoses6D->points[i].y = cloudKeyPoses3D->points[i].y;
+                cloudKeyPoses6D->points[i].z = cloudKeyPoses3D->points[i].z;
+                cloudKeyPoses6D->points[i].roll  = isamCurrentEstimate.at<Pose3>(i).rotation().pitch();
+                cloudKeyPoses6D->points[i].pitch = isamCurrentEstimate.at<Pose3>(i).rotation().yaw();
+                cloudKeyPoses6D->points[i].yaw   = isamCurrentEstimate.at<Pose3>(i).rotation().roll();
+            }
 
-        aLoopIsClosed = false;
-      }
+            aLoopIsClosed = false;
+        }
     }
 
     void clearCloud() {
@@ -1463,7 +1466,7 @@ public:
                 timeLastProcessing = timeLaserOdometry;
 
                 frameNum++;
-                auto t1 = std::chrono::steady_clock::now();
+//                auto t1 = std::chrono::steady_clock::now();
                 //获取世界坐标系转换矩阵，一个初始的估计，需要后续优化
                 transformAssociateToMap();
 
@@ -1483,14 +1486,14 @@ public:
                 correctPoses();
 
                 // for debug
-                auto t2 = std::chrono::steady_clock::now();
-                if (saveDataForDebug) {
-                    double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-                    tatalRunTime += dt;
+//                auto t2 = std::chrono::steady_clock::now();
+//                if (saveDataForDebug) {
+//                    double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
+//                    tatalRunTime += dt;
 
-                    if (frameNum % 25 == 0)
-                        ROS_INFO("[MapOptmization ]Keyframe %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
-                }
+//                    if (frameNum % 25 == 0)
+//                        ROS_INFO("[MapOptmization ]Keyframe %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
+//                }
 
                 publishTF();
 
@@ -1499,21 +1502,73 @@ public:
                 clearCloud();
             }
         }
+
     }
+
+//    double getLastMessageTime() {
+//        return lastMessageTime;
+//    }
+
+//    bool saveMap(lego_loam::saveMap::Request& req,
+//                 lego_loam::saveMap::Response& res) {
+//        if (req.save)
+//            ROS_INFO("Saving the map.");
+//        pcl::PointCloud<pcl::PointXYZRGB>::Ptr mapCloud;
+//        mapCloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+//        pcl::PointXYZRGB point;
+//        ROS_INFO("Key pose size: %d, Map point size: %d",cloudKeyPoses3D->size(), globalMapKeyFrames->size());
+//        if (!cloudKeyPoses3D->size() || !globalMapKeyFrames->size()) {
+//            for (auto& p : *cloudKeyPoses3D) {
+//                int rgb = ((int)255) << 16 | ((int)0) << 8 | ((int)0);
+//                point.x = p.x;
+//                point.y = p.y;
+//                point.z = p.z;
+//                point.rgb = rgb;
+//                mapCloud->push_back(point);
+//            }
+//            for (auto& p : *globalMapKeyFrames) {
+//                int rgb = ((int)0) << 16 | ((int)255) << 8 | ((int)0);
+//                point.x = p.x;
+//                point.y = p.y;
+//                point.z = p.z;
+//                point.rgb = rgb;
+//                mapCloud->push_back(point);
+//            }
+//            if (pcl::io::savePCDFileASCII("./map.pcd", *mapCloud)) {
+//                ROS_ERROR("Error in saving the map.");
+//                res.success = false;
+//                return false;
+//            }
+//            else {
+//                ROS_INFO("Map saved, tatal %d points.", mapCloud->size());
+//                res.success = true;
+//                return true;
+//            }
+//        } else {
+//            ROS_ERROR("Size zero!");
+//            res.success = false;
+//            return false;
+//        }
+//    }
 };
 
 
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "lego_loam");
+    ros::NodeHandle nhd;
 
     ROS_INFO("\033[1;32m---->\033[0m Map Optimization Started.");
 
     mapOptimization MO;
 
+//    ros::ServiceServer service = nhd.advertiseService("saveMap", &mapOptimization::saveMap, &MO);
+
     std::thread loopthread(&mapOptimization::loopClosureThread, &MO);
     std::thread visualizeMapThread(&mapOptimization::visualizeGlobalMapThread, &MO);
 
+    int stopClock = 1;
+    bool mapToSave = true;
     ros::Rate rate(200);
     while (ros::ok()) {
         ros::spinOnce();
@@ -1521,10 +1576,25 @@ int main(int argc, char** argv)
         MO.run();
 
         rate.sleep();
-    }
 
+        //10s内没有消息则认为bag播放完毕，保存地图
+//        if (mapToSave) {
+//            double timeNow = (ros::Time::now()).toSec();
+//            double dt = timeNow - MO.getLastMessageTime();
+//            ROS_INFO("dt: %f", dt);
+//            if (dt > stopClock) {
+//                stopClock++;
+//                ROS_INFO("No messages for %d second(s), wait %d second(s) to save the map.", stopClock, 10-stopClock);
+//            }
+//            if (dt > 10) {
+//                mapToSave = false;
+//                MO.saveMap();
+//            }
+//        }
+    }
     loopthread.join();
     visualizeMapThread.join();
 
     return 0;
+
 }

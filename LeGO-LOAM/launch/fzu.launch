@@ -18,7 +18,7 @@
     <node pkg="lego_loam" type="transformFusion"    name="transformFusion"    output="screen"/>
 
     <node pkg="lego_loam" type="saveTrajectory"    name="saveTrajectory"    output="screen">
-        <param name="trajectory_file" type="string" value="/home/vance/dataset/fzu/results/test_trajectory.txt"/>
+        <param name="trajectory_file" type="string" value="/home/vance/dataset/fzu/results/P_trajectory.txt"/>
     </node>
 
 

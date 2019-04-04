@@ -60,9 +60,6 @@ private:
 
     std_msgs::Header currentHeader;
 
-    int frameNum = 0;
-    double tatalRunTime = 0.0;
-
 public:
     TransformFusion() {
         pubLaserOdometry2 = nh.advertise<nav_msgs::Odometry> ("/integrated_to_init", 5);
@@ -182,9 +179,6 @@ public:
 
     //接收laserOdometry的信息
     void laserOdometryHandler(const nav_msgs::Odometry::ConstPtr& laserOdometry) {
-        frameNum++;
-        auto t1 = std::chrono::steady_clock::now();
-
         currentHeader = laserOdometry->header;
 
         double roll, pitch, yaw;
@@ -219,16 +213,6 @@ public:
         laserOdometryTrans2.setRotation(tf::Quaternion(-geoQuat.y, -geoQuat.z, geoQuat.x, geoQuat.w));
         laserOdometryTrans2.setOrigin(tf::Vector3(transformMapped[3], transformMapped[4], transformMapped[5]));
         tfBroadcaster2.sendTransform(laserOdometryTrans2);
-
-        // for debug
-        auto t2 = std::chrono::steady_clock::now();
-        if (saveDataForDebug) {
-            double dt = std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
-            tatalRunTime += dt;
-
-            if (frameNum % 50 == 0)
-                ROS_INFO("[TransformFusion]frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
-        }
     }
 
     //接收laserMapping的转换信息
