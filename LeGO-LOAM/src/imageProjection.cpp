@@ -28,6 +28,7 @@
 
 #include "utility.h"
 #include <opencv2/highgui/highgui.hpp>
+#include <stdio.h>
 
 class ImageProjection{
 private:
@@ -81,6 +82,8 @@ private:
     int frameNum = 0;
     double tatalRunTime = 0.0;
 
+    pcl::PointCloud<PointType>::Ptr typeCloud;
+
 public:
     ImageProjection() : nh("~") {
         subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2>("/velodyne_points", 1, &ImageProjection::cloudHandler, this);
@@ -108,6 +111,7 @@ public:
 
         fullCloud.reset(new pcl::PointCloud<PointType>());
         fullInfoCloud.reset(new pcl::PointCloud<PointType>());
+        typeCloud.reset(new pcl::PointCloud<PointType>());
 
         groundCloud.reset(new pcl::PointCloud<PointType>());
         segmentedCloud.reset(new pcl::PointCloud<PointType>());
@@ -116,6 +120,7 @@ public:
 
         fullCloud->points.resize(N_SCAN*Horizon_SCAN);
         fullInfoCloud->points.resize(N_SCAN*Horizon_SCAN);
+        typeCloud->points.resize(N_SCAN*Horizon_SCAN);
 
         segMsg.startRingIndex.assign(N_SCAN, 0);
         segMsg.endRingIndex.assign(N_SCAN, 0);
@@ -152,6 +157,7 @@ public:
 
         std::fill(fullCloud->points.begin(), fullCloud->points.end(), nanPoint);
         std::fill(fullInfoCloud->points.begin(), fullInfoCloud->points.end(), nanPoint);
+        std::fill(typeCloud->points.begin(), typeCloud->points.end(), nanPoint);
     }
 
     ~ImageProjection() {}
@@ -161,7 +167,7 @@ public:
         pcl::fromROSMsg(*laserCloudMsg, *laserCloudIn);
     }
 
-    void saveImagePointcloud() {
+    void saveImagePointcloud(int frameNum) {
         //save image
         cv::Mat rangeMatDisplay = cv::Mat(N_SCAN, Horizon_SCAN, CV_8UC1, cv::Scalar::all(0));;
         for (int i = 0; i < N_SCAN; ++i) {
@@ -173,7 +179,9 @@ public:
                 rangeMatDisplay.at<uchar>(i,j) = static_cast<uchar>(p);
             }
         }
-        if (cv::imwrite("/home/vance/test_frame_50_image.jpg", rangeMatDisplay)) {
+        char fileImage[1024];
+        sprintf(fileImage, "/home/vance/test_frame_%d_image.jpg", frameNum);
+        if (cv::imwrite(fileImage, rangeMatDisplay)) {
 //            cv::imshow("Display", rangeMatDisplay);
 //            cv::waitKey(200);
             ROS_INFO("write image successed.");
@@ -182,21 +190,53 @@ public:
             ROS_ERROR("write image failed.");
 
         //save pointcloud
-        fullCloud->width = 1;
-        fullCloud->height = fullCloud->points.size();
-        groundCloud->width = 1;
-        groundCloud->height = groundCloud->points.size();
-        segmentedCloud->width = 1;
-        segmentedCloud->height = segmentedCloud->points.size();
-        outlierCloud->width = 1;
-        outlierCloud->height = outlierCloud->points.size();
-        segmentedCloudPure->width = 1;
-        segmentedCloudPure->height = segmentedCloudPure->points.size();
-        pcl::io::savePCDFile("/home/vance/test_frame_50_full_cloud.pcd", *fullCloud);
-        pcl::io::savePCDFile("/home/vance/test_frame_50_ground_cloud.pcd", *groundCloud);
-        pcl::io::savePCDFile("/home/vance/test_frame_50_segmented_cloud.pcd", *segmentedCloud);
-        pcl::io::savePCDFile("/home/vance/test_frame_50_outlier_cloud.pcd", *outlierCloud);
-        pcl::io::savePCDFile("/home/vance/test_frame_50_segmentedCloudPure.pcd", *segmentedCloudPure);
+        pcl::PointCloud<pcl::PointXYZRGB>::Ptr tmpCloud;
+        tmpCloud.reset(new pcl::PointCloud<pcl::PointXYZRGB>());
+//        pcl::copyPointCloud(*typeCloud, *tmpCloud);
+        uint8_t r, g, b;
+        for (auto &p : typeCloud->points) {
+            pcl::PointXYZRGB point;
+            point.x = p.x;
+            point.y = p.y;
+            point.z = p.z;
+            if (p.intensity == 0) {
+                //平面点红色
+                r = uint8_t(255);
+                g = uint8_t(0);
+                b = uint8_t(0);
+                uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+                point.rgb = *reinterpret_cast<float*>(&rgb);
+            } else if (p.intensity == 1) {
+                //聚类点黄色
+                r = uint8_t(255);
+                g = uint8_t(255);
+                b = uint8_t(0);
+                uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+                point.rgb = *reinterpret_cast<float*>(&rgb);
+            } else if (p.intensity == 2) {
+                //离群点绿色
+                r = uint8_t(0);
+                g = uint8_t(255);
+                b = uint8_t(0);
+                uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+                point.rgb = *reinterpret_cast<float*>(&rgb);
+            } else {
+                //原始点白色
+                r = uint8_t(255);
+                g = uint8_t(255);
+                b = uint8_t(255);
+                uint32_t rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+                point.rgb = *reinterpret_cast<float*>(&rgb);
+            }
+            tmpCloud->push_back(point);
+        }
+        tmpCloud->height = 1;
+        tmpCloud->width = tmpCloud->size();
+        tmpCloud->is_dense = false;
+        char filePointCloud[1024];
+        sprintf(filePointCloud, "/home/vance/test_frame_%d_type_cloud.pcd", frameNum);
+        pcl::io::savePCDFile(filePointCloud, *tmpCloud);
+
     }
 
     void cloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudMsg) {
@@ -216,8 +256,8 @@ public:
             if (frameNum % 50 == 0) {
                 ROS_INFO("[ImageProjection]Frame %d time cost: %f, Averange time cost: %f", frameNum, dt, tatalRunTime/(double)frameNum);
 
-//            if (frameNum == 50)
-//                saveImagePointcloud();
+            if (frameNum % 50 == 0)
+                saveImagePointcloud(frameNum);
             }
         }
 
@@ -272,6 +312,7 @@ public:
 
             fullCloud->points[index] = thisPoint;
             fullInfoCloud->points[index].intensity = range;         //点的距离存在fullInfoCloud的intensity里
+            typeCloud->points[index] = thisPoint;
         }
     }
 
@@ -309,14 +350,17 @@ public:
             for (size_t j = 0; j < Horizon_SCAN; ++j) {
                 if (groundMat.at<int8_t>(i,j) == 1 || rangeMat.at<float>(i,j) == FLT_MAX) {
                     labelMat.at<int>(i,j) = -1; //-1指地面点和无限远点（无效点），即可以去除的点
+                    typeCloud->points[j + i*Horizon_SCAN].intensity = 2;
                 }
             }
         }
         if (pubGroundCloud.getNumSubscribers() != 0 || saveDataForDebug) {
             for (size_t i = 0; i <= groundScanInd; ++i) {
                 for (size_t j = 0; j < Horizon_SCAN; ++j) {
-                    if (groundMat.at<int8_t>(i,j) == 1)
+                    if (groundMat.at<int8_t>(i,j) == 1) {
                         groundCloud->push_back(fullCloud->points[j + i*Horizon_SCAN]);
+                        typeCloud->points[j + i*Horizon_SCAN].intensity = 0;
+                    }
                 }
             }
         }
@@ -342,6 +386,7 @@ public:
                     if (labelMat.at<int>(i,j) == 999999) {
                         if (i > groundScanInd && j % 5 == 0) {
                             outlierCloud->push_back(fullCloud->points[j + i*Horizon_SCAN]);
+                            typeCloud->points[j + i*Horizon_SCAN].intensity = 2;
                             continue;
                         } else {
                             continue;
@@ -356,6 +401,7 @@ public:
                     segMsg.segmentedCloudRange[sizeOfSegCloud]  = rangeMat.at<float>(i,j);
                     segmentedCloud->push_back(fullCloud->points[j + i*Horizon_SCAN]);
                     ++sizeOfSegCloud;
+                    typeCloud->points[j + i*Horizon_SCAN].intensity = 1;
                 }
             }
 
@@ -368,6 +414,7 @@ public:
                     if (labelMat.at<int>(i,j) > 0 && labelMat.at<int>(i,j) != 999999) {
                         segmentedCloudPure->push_back(fullCloud->points[j + i*Horizon_SCAN]);
                         segmentedCloudPure->points.back().intensity = labelMat.at<int>(i,j);
+                        typeCloud->points[j + i*Horizon_SCAN].intensity = 1;
                     }
                 }
             }
@@ -443,6 +490,8 @@ public:
                     allPushedIndX[allPushedIndSize] = thisIndX;
                     allPushedIndY[allPushedIndSize] = thisIndY;
                     ++allPushedIndSize;
+
+                    typeCloud->points[thisIndY + thisIndX*64].intensity = 1;
                 }
             }
         }
@@ -467,6 +516,7 @@ public:
             for (size_t i = 0; i < allPushedIndSize; ++i) {
                 //无效聚类，全部打上999999
                 labelMat.at<int>(allPushedIndX[i], allPushedIndY[i]) = 999999;
+                typeCloud->points[allPushedIndY[i] + allPushedIndX[i]*64].intensity = 2;
             }
         }
     }
