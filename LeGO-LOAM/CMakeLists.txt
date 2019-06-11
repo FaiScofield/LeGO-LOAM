@@ -50,7 +50,6 @@ include_directories(
 )
 
 link_directories(
-#    include
     ${OpenCV_LIBRARY_DIRS}
     ${PCL_LIBRARY_DIRS}
     ${GTSAM_LIBRARY_DIRS}
@@ -81,9 +80,9 @@ target_link_libraries(kittiVelodyneRawData2Bag ${catkin_LIBRARIES} ${PCL_LIBRARI
 add_executable(simpleVO src/simpleVO.cpp)
 target_link_libraries(simpleVO ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(testmatch src/testmatch.cpp)
-target_link_libraries(testmatch ${catkin_LIBRARIES} ${OpenCV_LIBS})
+#add_executable(testmatch src/testmatch.cpp)
+#target_link_libraries(testmatch ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
-add_executable(saveMapService src/saveMapService.cpp)
-target_link_libraries(saveMapService ${catkin_LIBRARIES})
-add_dependencies(saveMapService lego_loam_gencpp)
+#add_executable(saveMapService src/saveMapService.cpp)
+#target_link_libraries(saveMapService ${catkin_LIBRARIES})
+#add_dependencies(saveMapService lego_loam_gencpp)

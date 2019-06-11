@@ -47,8 +47,9 @@ private:
     const int totalSubregionNum = xSubregionNum * ySubregionNum; // 总区域数
     const int xBoundary = 20, yBoundary = 20; // 左右和上下预留的边界像素量
 
-    const int subregionWidth = static_cast<int>((640 - 2 * xBoundary) / xSubregionNum);
-    const int subregionHeight = static_cast<int>((480 - 2 * yBoundary) / ySubregionNum);
+    const int imageRows = 370, imageCols = 1226;
+    const int subregionWidth = static_cast<int>((imageCols - 2 * xBoundary) / xSubregionNum);
+    const int subregionHeight = static_cast<int>((imageRows - 2 * yBoundary) / ySubregionNum);
     vector<size_t> subregionFeatureNum; // 每个子区域的特征点数
     size_t featuresIndFromStart; // 特征点的相对第一个点的索引
     size_t totalFeatureNum; // 总特征点数
@@ -57,12 +58,13 @@ private:
     vector<KeyPoint> featuresSub;    // 存放图像某个子区域内检测到的特征点
     vector<DMatch> goodMatches, RansacMatches;
 
-
     size_t frameNum = 0;
 
 public:
     SimpleVO(): nh("~") {
-        subImageMsg = nh.subscribe<sensor_msgs::Image>("/camera/rgb/image_raw", 1, &SimpleVO::imageMsgHandler, this);
+        subImageMsg = nh.subscribe<sensor_msgs::Image>("/kitti/camera_color_left/image_raw", 1, &SimpleVO::imageMsgHandler, this);
+//        subImageMsg = nh.subscribe<sensor_msgs::Image>("/camera/rgb/image_raw", 1, &SimpleVO::imageMsgHandler, this);
+
         subImageDepthMsg = nh.subscribe<sensor_msgs::Image>("/camera/depth_registered/image_raw", 1, &SimpleVO::imageDepthMsgHandler, this);
 
         pubVisualOdom = nh.advertise<nav_msgs::Odometry>("/simpleVO", 5);
@@ -71,12 +73,15 @@ public:
         for (int i = 0; i < 6; ++i)
             transformCur[i] = 0;
 
+//        imageRows = 480;
+//        imageCols = 640;
 //        kMat = Mat(3, 3, CV_64FC1, kImage);
 //        dMat = Mat(4, 1, CV_64FC1, dImage);
-        imageCurr = Mat(480, 640, CV_8UC1, Scalar::all(0));
-        imageLast = Mat(480, 640, CV_8UC1, Scalar::all(0));
-        imageDepthCurr = Mat(480, 640, CV_32FC1, Scalar::all(0.0));
-        imageDepthLast = Mat(480, 640, CV_32FC1, Scalar::all(0.0));
+
+        imageCurr = Mat(imageRows, imageCols, CV_8UC1, Scalar::all(0));
+        imageLast = Mat(imageRows, imageCols, CV_8UC1, Scalar::all(0));
+        imageDepthCurr = Mat(imageRows, imageCols, CV_32FC1, Scalar::all(0.0));
+        imageDepthLast = Mat(imageRows, imageCols, CV_32FC1, Scalar::all(0.0));
 
         firstFrame = true;
         systemReady = true;
@@ -90,6 +95,7 @@ public:
     }
 
     void imageMsgHandler(const sensor_msgs::Image::ConstPtr& imageMsg) {
+        ROS_INFO("Get an image message.");
         imageHeader = imageMsg->header;
 
         timeImageCurr = imageHeader.stamp.toSec();
@@ -170,8 +176,8 @@ public:
                     for (auto fit = featuresSub.begin(); fit != featuresSub.end(); fit++) {
                         (*fit).pt.x += subregionLeft;   // x - col
                         (*fit).pt.y += subregionTop;    // y - row
-                        if ((*fit).pt.x < 0 || (*fit).pt.x >= 640 ||
-                            (*fit).pt.y < 0 || (*fit).pt.y >= 480) {
+                        if ((*fit).pt.x < 0 || (*fit).pt.x >= imageCols ||
+                            (*fit).pt.y < 0 || (*fit).pt.y >= imageRows) {
                             ROS_WARN("Delete a keypoint for out of range.");
                             continue;
                         }
@@ -191,10 +197,12 @@ public:
         ROS_INFO("Frame %d, Features: %d", frameNum, featuresCurr.size());
     }
 
+    /// working on it
 //    void calculateTransformation() {
 //        return;
 //    }
 
+    /// working on it
 //    void publishOdometry() {
 //        return;
 //    }
@@ -202,7 +210,17 @@ public:
     void publishOutputImage() {
         for (auto& fea : featuresCurr) {
             Point2f pixel = fea.pt;
-            circle(imageShow, pixel, 2, Scalar(0, 255, 0), -1);
+            if (pixel.x < 0 || pixel.x >= imageCols ||
+                pixel.y < 0 || pixel.y >= imageRows) {
+                ROS_WARN("error feature position! skip!");
+                continue;
+            }
+            try {
+                circle(imageShow, pixel, 2, Scalar(0, 255, 0), -1);
+            } catch (cv::Exception& e) {
+                ROS_ERROR("cv exception: %s", e.what());
+            }
+//            circle(imageShow, pixel, 2, Scalar(0, 255, 0), -1);
         }
 
         bridge.image = imageShow;
@@ -273,18 +291,16 @@ public:
 //            systemReady = false;
             return;
         }
-
-
         systemReady = true;
     }
 
     void run() {
-        if (systemReady && newImageMsg && newImageDepthMsg &&
-            abs(timeImageCurr - timeImageDepthCurr) < 0.05) {
+        if (systemReady && newImageMsg /*&& newImageDepthMsg &&
+            abs(timeImageCurr - timeImageDepthCurr) < 0.05*/) {
 
             systemReady = false;
             newImageMsg = false;
-            newImageDepthMsg = false;
+//            newImageDepthMsg = false;
         } else
             return;
 
@@ -301,7 +317,7 @@ public:
         }
 
 
-        featureMatching();
+//        featureMatching();
 
 //        calculateTransformation();
 
@@ -316,8 +332,8 @@ public:
             drawMatches(imageLast, featuresLast, imageCurr, featuresCurr,
                         RansacMatches, showMatches2);
 
-//            imshow("Matches", showMatches);
-//            waitKey(1000);
+            imshow("Matches", showMatches);
+            waitKey(10);
             stringstream ss, ss2, ss3, ss4;
             ss << "/home/vance/matches/" << frameNum << ".jpg";
             ss2 << "/home/vance/matches/" << frameNum << "_ransac.jpg";

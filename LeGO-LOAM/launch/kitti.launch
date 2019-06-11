@@ -21,9 +21,14 @@
     <node pkg="lego_loam" type="mapOptmization"     name="mapOptmization"     output="screen"/>
     <node pkg="lego_loam" type="transformFusion"    name="transformFusion"    output="screen"/>
 
-    <node pkg="lego_loam" type="saveTrajectory"    name="saveTrajectory"    output="screen">
-        <param name="trajectory_file" type="string" value="/home/vance/dataset/kitti/results/kitti_trajectory_01s.txt"/>
+    <node pkg="lego_loam" type="simpleVO"           name="simpleVO"           output="screen">
+        <remap from="/camera/rgb/image_raw" to="/kitti/camera_color_left/image_raw" />
+<!--        <remap from="/camera/rgb/image_raw" to="/kitti/camera_gray_left/image_raw" />-->
     </node>
+
+<!--    <node pkg="lego_loam" type="saveTrajectory"    name="saveTrajectory"    output="screen">
+        <param name="trajectory_file" type="string" value="/home/vance/dataset/kitti/results/kitti_trajectory_01s.txt"/>
+    </node>-->
 
 
 </launch>

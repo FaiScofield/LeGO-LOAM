@@ -37,6 +37,7 @@ void loadPointCloudData(string infile, pcl::PointCloud<PointXYZI>::Ptr& points) 
 }
 
 
+// for kitti odometry 03 sequence
 int main(int argc, char **argv){
     ros::init(argc, argv, "veloData2Bag");
     ros::NodeHandle nh;

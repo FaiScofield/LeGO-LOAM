@@ -77,8 +77,7 @@ int main(int argc, char **argv)
     }
 
     Mat show;
-    drawMatches(img1, keypoints1, img2, keypoints2,
-                good_matches, show);
+    drawMatches(img1, keypoints1, img2, keypoints2, good_matches, show);
     imshow("Good Matches", show);
     waitKey(0);
 

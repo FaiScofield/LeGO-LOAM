@@ -75,7 +75,7 @@ typedef pcl::PointXYZI  PointType;
  */
 
 // VLP-16
-// extern const int N_SCAN = 16;
+//extern const int N_SCAN = 16;
 //extern const int Horizon_SCAN = 1800;
 //extern const float ang_res_x = 0.2;
 //extern const float ang_res_y = 2.0;
@@ -84,10 +84,10 @@ typedef pcl::PointXYZI  PointType;
 
 // 64ES3
 extern const int N_SCAN = 64;
-extern const int Horizon_SCAN = 1800;
+extern const int Horizon_SCAN = 870;
 extern const float ang_res_x = 0.2;
 extern const float ang_res_y = 26.8/float(N_SCAN-1);
-extern const float ang_bottom = 15.1;   // 15.1, 24.8
+extern const float ang_bottom = 24.8;   // 15.1, 24.8
 extern const int groundScanInd = 20;
 
 // Ouster OS1-64
@@ -132,7 +132,7 @@ extern const float historyKeyframeFitnessScore = 0.3;
 
 extern const float globalMapVisualizationSearchRadius = 2000.0; // 500
 
-extern const bool saveDataForDebug = true;  // for debug
+extern const bool saveDataForDebug = false;  // for debug
 
 
 struct smoothness_t{
